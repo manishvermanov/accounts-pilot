@@ -1,0 +1,53 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# venv
+.venv/
+venv/
+env/
+
+# env / secrets — NEVER commit
+.env
+*.env
+secrets/
+
+# real gate data (bank/password/contract) — keep only the *.example.json
+examples/gate_data.json
+gate_data.json
+
+# local data (sqlite db, screenshots, browser state)
+data/
+!data/.gitkeep
+artifacts/
+screenshots/
+storage_state.json
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
+.gstack/
+
+# --- per-OTA login cookies (sensitive — never commit) ---
+storage_state_*.json
+page_maps_*.json
+
+# --- local scratch / test output ---
+*.png
+test-reports/
+.pytest_cache/
+service.log
+qt*.txt
+suite*.txt
+finalsuite*.txt
+fails.txt
+r.txt
+result.txt
+test_out.txt
+wtest.txt

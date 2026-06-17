@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Accounts Pilot — multi-OTA onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f5fb;
+    --card:#ffffff; --card2:#f7f9fd;
+    --line:#e7ecf4; --line2:#eef2f8;
+    --ink:#0f1729; --muted:#5c6880; --faint:#94a1b6;
+    --brand:#4f46e5; --brand2:#7c5cff; --brand-ink:#4338ca;
+    --ok:#16a34a; --okbg:#e8f8ef;
+    --warn:#b45309; --warnbg:#fff5e6;
+    --err:#dc2626; --errbg:#fdecec;
+    --busy:#2563eb; --busybg:#e9f0ff;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px -14px rgba(16,24,40,.22);
+    --shadow-lg:0 1px 2px rgba(16,24,40,.06),0 28px 56px -18px rgba(16,24,40,.30);
+    --r:15px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;color:var(--ink);font-family:'Inter',-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1100px 460px at 6% -12%, #ffffff, transparent 55%),
+      radial-gradient(900px 440px at 100% -8%, #e9edfc, transparent 60%),
+      linear-gradient(180deg,#f5f7fc,#eef1f9);
+    background-attachment:fixed;-webkit-font-smoothing:antialiased;}
+
+  /* ---- top bar ---- */
+  .topbar{position:sticky;top:0;z-index:50;backdrop-filter:saturate(160%) blur(12px);
+    background:rgba(255,255,255,.78);border-bottom:1px solid var(--line);}
+  .topbar-in{max-width:1340px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:13px}
+  .mark{position:relative;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none;
+    background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 8px 20px -8px rgba(99,102,241,.55)}
+  .mark svg{width:25px;height:25px}
+  .mark .mk-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+  .mark.has-img{background:transparent;box-shadow:none}
+  .mark.has-img .mk-img{display:block} .mark.has-img .mk-fallback{display:none}
+  .brand-name{font-family:'Dancing Script',cursive;font-weight:700;font-size:28px;line-height:1;letter-spacing:.4px;
+    background:linear-gradient(92deg,#4f46e5,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .topbar .spacer{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 13px;box-shadow:var(--shadow)}
+  .chip b{color:var(--ink)} .chip .pip{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+  /* ---- layout ---- */
+  .app{max-width:1400px;margin:16px auto;padding:0 20px 40px;display:grid;grid-template-columns:560px 1fr;gap:16px;align-items:start}
+  @media(max-width:1160px){ .app{grid-template-columns:1fr} }
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .side{position:sticky;top:74px;overflow:hidden}
+  @media(max-width:1060px){ .side{position:static} }
+  .side-head{padding:13px 16px 11px;border-bottom:1px solid var(--line2)}
+  .side-head h2{margin:0;font-size:14.5px;font-weight:700;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+  .side-head p{margin:5px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+  .side-body{padding:12px 16px 16px}
+
+  .steps{display:flex;flex-direction:column;gap:7px;margin:0 0 12px}
+  .step{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--muted)}
+  .step .n{flex:none;width:19px;height:19px;border-radius:6px;background:#eef0fb;color:var(--brand-ink);
+    font-weight:800;font-size:10.5px;display:grid;place-items:center;margin-top:1px}
+  .step b{color:var(--ink);font-weight:600}
+
+  /* ---- MIS search ---- */
+  .search-row{display:flex;gap:8px;align-items:stretch;margin-bottom:11px}
+  .search-input{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:#f8fafd;border:1px solid var(--line);
+    border-radius:11px;padding:0 12px;transition:border-color .15s, box-shadow .15s}
+  .search-input:focus-within{border-color:var(--brand);box-shadow:0 0 0 4px rgba(79,70,229,.14);background:#fff}
+  .search-input svg{width:16px;height:16px;color:var(--faint);flex:none}
+  .search-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:13.5px;padding:11px 0}
+  .search-input input::placeholder{color:#9aa6bb}
+
+  .results{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto;margin:2px 0 4px;padding-right:2px}
+  .results::-webkit-scrollbar{width:8px} .results::-webkit-scrollbar-thumb{background:#dde3ee;border-radius:8px}
+  .result{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;
+    background:#fff;cursor:pointer;transition:border-color .14s, background .14s, transform .08s}
+  .result:hover{border-color:#cfd7ea;background:#f9fbff;transform:translateY(-1px)}
+  .result.active{border-color:var(--brand);background:#f4f3ff;box-shadow:0 0 0 3px rgba(79,70,229,.10)}
+  .result .rico{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;
+    background:linear-gradient(135deg,#6366f1,#22d3ee)}
+  .result .rmeta{min-width:0;flex:1}
+  .result .rname{font-size:13px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result .rsub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result .rgo{flex:none;color:var(--faint)}
+  .results .empty{font-size:12.5px;color:var(--muted);padding:18px 6px;text-align:center;line-height:1.6}
+
+  /* ---- selected property card ---- */
+  .selected{margin-top:6px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;
+    box-shadow:0 1px 2px rgba(16,24,40,.04),0 16px 34px -22px rgba(16,24,40,.4);animation:mrise .22s cubic-bezier(.2,.7,.3,1)}
+  .sc-top{display:flex;align-items:center;gap:11px;padding:14px 14px;border-bottom:1px solid var(--line2);
+    background:linear-gradient(180deg,#f7fbf8,#fff)}
+  .sc-ico{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,#16a34a,#22d3ee);box-shadow:0 10px 20px -10px rgba(22,163,74,.65)}
+  .sc-ico svg{width:22px;height:22px}
+  .sc-name{font-size:14.5px;font-weight:800;letter-spacing:-.2px;line-height:1.2}
+  .sc-loc{font-size:12px;color:var(--muted);margin-top:2px}
+  .sc-x{margin-left:auto}
+  .sc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line2)}
+  .sc-stat{background:#fff;padding:11px 8px;text-align:center;transition:background .14s}
+  .sc-stat:hover{background:#f8fafd}
+  .sc-stat b{display:block;font-size:17px;font-weight:800;letter-spacing:-.5px;
+    background:linear-gradient(135deg,#4f46e5,#7c5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sc-stat span{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:1px;display:block}
+  .sc-warn{display:flex;gap:9px;align-items:flex-start;padding:10px 14px;background:var(--warnbg);border-top:1px solid #f3e2c2;
+    color:#8a5a06;font-size:12px;line-height:1.45;cursor:pointer;transition:background .14s}
+  .sc-warn:hover{background:#fdeecb}
+  .sc-warn b{color:#7a4f05} .sc-warn svg{flex:none;width:16px;height:16px;margin-top:1px}
+  .sc-rooms{padding:11px 14px;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--line2)}
+  .sc-room{display:flex;align-items:center;gap:8px;font-size:12px}
+  .sc-room .rn{font-weight:700;color:var(--ink)}
+  .sc-room .rp{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .rate{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:#eef1f7;color:var(--muted);white-space:nowrap}
+  .rate b{color:var(--ink)}
+
+  /* ---- collapsed View JSON ---- */
+  .json-tog{margin-top:2px;border-top:1px solid var(--line2)}
+  .json-tog summary{list-style:none;cursor:pointer;padding:10px 14px;font-size:11.5px;font-weight:700;color:var(--muted);
+    display:flex;align-items:center;gap:7px;user-select:none}
+  .json-tog summary::-webkit-details-marker{display:none}
+  .json-tog summary .caret{transition:transform .15s} .json-tog[open] summary .caret{transform:rotate(90deg)}
+  .json-pre{margin:0;padding:0 14px 13px;max-height:42vh;overflow:auto;
+    font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.6;color:#46506a;white-space:pre}
+  .json-pre::-webkit-scrollbar{width:8px} .json-pre::-webkit-scrollbar-thumb{background:#dde3ee;border-radius:8px}
+
+  .editor-actions{display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap}
+  .toggle{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none}
+  .toggle input{display:none}
+  .toggle .track{width:36px;height:21px;border-radius:999px;background:#d6dcea;position:relative;transition:background .18s}
+  .toggle .track::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s}
+  .toggle input:checked + .track{background:var(--brand)}
+  .toggle input:checked + .track::after{transform:translateX(15px)}
+
+  /* ---- buttons ---- */
+  button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:10px;padding:8px 13px;font-weight:600;font-size:12.5px;
+    display:inline-flex;align-items:center;gap:7px;transition:transform .08s, background .15s, box-shadow .15s, border-color .15s;white-space:nowrap}
+  button:active{transform:translateY(1px)}
+  button svg{width:15px;height:15px}
+  .btn{background:linear-gradient(135deg,#4f46e5,#7c5cff);color:#fff;box-shadow:0 8px 18px -10px rgba(79,70,229,.85)} .btn:hover{filter:brightness(1.06)}
+  .btn-ok{background:var(--ok);color:#fff;box-shadow:0 8px 18px -10px rgba(22,163,74,.6)} .btn-ok:hover{background:#15803d}
+  .btn-stop{background:#fff;color:var(--err);border-color:#f3c9c9} .btn-stop:hover{background:var(--errbg)}
+  .btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)} .btn-ghost:hover{background:#f6f8fc;border-color:#d8deea}
+  .btn-sm{padding:6px 10px;font-size:11.5px;border-radius:8px}
+
+  /* ---- OTA grid ---- */
+  .grid-head{display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 12px}
+  .grid-head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px}
+  .grid-head .hint{font-size:12px;color:var(--muted)}
+  .otas{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+  .ota{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);overflow:hidden;transition:transform .16s, box-shadow .16s, border-color .16s}
+  .ota:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:#d8deea}
+  .ota::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--bc,#4f46e5)}
+  .ota.busy{border-color:color-mix(in srgb,var(--bc,#2563eb) 40%,var(--line))}
+  .ota-head{display:flex;align-items:center;gap:11px;padding:14px 14px 0}
+  .logo{position:relative;overflow:hidden;width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;
+    background:var(--bc,#4f46e5);box-shadow:0 8px 18px -12px var(--bc,#4f46e5)}
+  .logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:6px;display:none}
+  .logo.has-img{background:#fff;border:1px solid var(--line)}
+  .logo.has-img img{display:block} .logo.has-img .ini{display:none}
+  .ota-title{min-width:0;flex:1}
+  .ota-title h3{margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ota-title .sub{font-size:11px;color:var(--faint);margin-top:1px;font-family:'JetBrains Mono',monospace}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;
+    background:#eef1f7;color:var(--muted);white-space:nowrap}
+  .pill .dot{width:6.5px;height:6.5px;border-radius:50%;background:currentColor}
+  .pill.ok{background:var(--okbg);color:var(--ok)} .pill.busy{background:var(--busybg);color:var(--busy)}
+  .pill.warn{background:var(--warnbg);color:var(--warn)} .pill.err{background:var(--errbg);color:var(--err)}
+  .pill.busy .dot,.pill.warn .dot{animation:pulse 1.25s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 60%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+  .ota-body{padding:12px 14px 14px}
+  .actions{display:flex;flex-wrap:wrap;gap:7px}
+  .gate{margin-top:11px;background:var(--warnbg);border:1px solid #f3e2c2;border-radius:11px;padding:11px;font-size:12px;line-height:1.5;color:#8a5a06}
+  .gate input{padding:7px 10px;border:1px solid #e3c98f;border-radius:8px;width:130px;background:#fff;color:var(--ink);font-family:'JetBrains Mono',monospace;margin-right:6px}
+
+  .logbar{display:flex;align-items:center;justify-content:space-between;margin:12px 0 7px}
+  .logbar .lab{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:7px}
+  .logbar .lab .ldot{width:6.5px;height:6.5px;border-radius:50%;background:#cbd3e2}
+  .ota.busy .logbar .lab .ldot{background:var(--busy);animation:pulse 1.25s infinite}
+  .log{position:relative;white-space:pre-wrap;word-break:break-word;background:#0c1322;color:#bcd0f5;border-radius:11px;
+    padding:12px 13px;font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.65;
+    max-height:200px;overflow:auto;border:1px solid #142036}
+  .log::-webkit-scrollbar{width:8px} .log::-webkit-scrollbar-thumb{background:#26314c;border-radius:8px}
+  .log .muted{color:#6b7aa0}
+
+  /* square icon button (e.g. View JSON next to Search) */
+  .btn-icon{flex:none;width:40px;height:auto;padding:0;display:grid;place-items:center;align-self:stretch}
+  .btn-icon svg{width:17px;height:17px}
+
+  /* ---- JSON modal ---- */
+  .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px;
+    background:rgba(15,23,41,.52);backdrop-filter:blur(5px);animation:mfade .14s ease}
+  @keyframes mfade{from{opacity:0}to{opacity:1}}
+  .modal.open{display:flex}
+  .modal-box{width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;background:var(--card);
+    border:1px solid var(--line);border-radius:18px;box-shadow:0 40px 90px -28px rgba(8,12,28,.6);overflow:hidden;
+    animation:mrise .2s cubic-bezier(.2,.7,.3,1)}
+  @keyframes mrise{from{transform:translateY(14px) scale(.985);opacity:.4}to{transform:none;opacity:1}}
+  .modal-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line2);
+    background:linear-gradient(180deg,#fbfcff,#fff)}
+  .modal-head .mh-ico{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,#4f46e5,#7c5cff);box-shadow:0 8px 16px -8px rgba(79,70,229,.7)}
+  .modal-head .mh-ico svg{width:17px;height:17px}
+  .modal-head .mt{font-size:14.5px;font-weight:800;letter-spacing:-.2px;line-height:1.1}
+  .modal-head .ms{font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace;display:block;margin-top:1px}
+  .modal-edit{flex:1;min-height:50vh;margin:0;border:0;outline:0;resize:none;padding:16px 18px;background:#0b1120;color:#d7e3ff;
+    font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;tab-size:2;white-space:pre;
+    box-shadow:inset 0 1px 0 #182238}
+  .modal-edit::-webkit-scrollbar{width:10px} .modal-edit::-webkit-scrollbar-thumb{background:#283450;border-radius:8px;border:2px solid #0b1120}
+  .modal-edit::selection{background:rgba(124,92,255,.4)}
+  .modal-foot{display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--line2);background:var(--card)}
+  .modal-foot .st{font-size:12px;font-weight:600}
+  .modal-foot .st.ok{color:var(--ok)} .modal-foot .st.bad{color:var(--err);white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;max-height:90px;overflow:auto}
+  .modal-foot .sp{flex:1}
+
+  /* view tabs (Table / JSON) */
+  .vtabs{display:flex;gap:3px;background:#eef1f7;border-radius:9px;padding:3px;margin-left:6px}
+  .vtab{padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;border:1px solid transparent;background:transparent}
+  .vtab:hover{color:var(--ink)}
+  .vtab.active{background:#fff;color:var(--brand-ink);box-shadow:var(--shadow)}
+
+  /* ---- field → value table editor ---- */
+  .formwrap{flex:1;overflow:auto;background:#fff}
+  .formwrap::-webkit-scrollbar{width:10px} .formwrap::-webkit-scrollbar-thumb{background:#dde3ee;border-radius:8px;border:2px solid #fff}
+  .fsh{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#eef1fb,#e9edf8);color:var(--brand-ink);
+    font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:9px 16px;border-bottom:1px solid var(--line2)}
+  .fgroup{border-left:3px solid #eceffa;margin:0 0 0 12px}
+  .fgroup-t{font-size:11.5px;font-weight:800;color:var(--ink);padding:9px 14px 7px;background:#fafbfe;border-bottom:1px solid var(--line2)}
+  .frow{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:center;padding:7px 16px;border-bottom:1px solid #f1f4f9}
+  .frow:hover{background:#fafbfe}
+  .frow .fk{font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px;line-height:1.3}
+  .frow .fv input,.frow .fv select,.frow .fv textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;
+    font:inherit;font-size:12.5px;background:#fff;color:var(--ink);outline:none;transition:border-color .14s,box-shadow .14s}
+  .frow .fv input:focus,.frow .fv select:focus,.frow .fv textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.13)}
+  .frow .fv textarea{resize:vertical;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.5;min-height:38px}
+  .frow .fv .ro{font-size:12px;color:var(--faint)}
+  .frow .fv input::placeholder{color:#c4ccdb}
+  .frow.miss .fv input,.frow.miss .fv select,.frow.miss .fv textarea{border-color:#f0c674;background:#fffaf0}
+  .frow.miss .fv input::placeholder{color:#c79a3a}
+  .notset{font-size:9.5px;font-weight:800;color:var(--warn);background:var(--warnbg);border:1px solid #f3e2c2;
+    padding:1px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+
+  .footnote{max-width:1340px;margin:0 auto;padding:0 20px 34px;color:var(--faint);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="mark" aria-hidden="true">
+      <svg class="mk-fallback" viewBox="0 0 24 24" fill="none"><path d="M3 12.5 11 4l10 4-6 12-12-7.5z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M11 4v9.5l4 6.5" stroke="#fff" stroke-width="1.7" stroke-linejoin="round" opacity=".7"/></svg>
+      <img class="mk-img" alt="DigiStay" src="https://logo.clearbit.com/digistay.ai"
+           onload="this.parentElement.classList.add('has-img')"
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://www.google.com/s2/favicons?domain=digistay.ai&sz=128';}else{this.remove();}">
+    </div>
+    <div class="brand-name">Accounts&nbsp;Pilot</div>
+    <div class="spacer"></div>
+    <div class="chip" id="stat-chip"><span class="pip"></span><b id="stat-conn">0</b>&nbsp;connected · <b id="stat-fill">0</b>&nbsp;filling</div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- control panel -->
+  <aside class="panel side">
+    <div class="side-head">
+      <h2>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#4f46e5" stroke-width="1.7"/><path d="m20 20-3.5-3.5" stroke="#4f46e5" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Find property
+      </h2>
+      <p>Search the MIS by hotel name, pick one — its data is fetched &amp; prepared automatically, then drives <b>every</b> channel.</p>
+    </div>
+    <div class="side-body">
+      <div class="search-row">
+        <label class="search-input">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="q" placeholder="Search hotel name…" autocomplete="off" spellcheck="false"
+                 onkeydown="if(event.key==='Enter')searchHotels()">
+        </label>
+        <button class="btn" id="searchBtn" onclick="searchHotels()">Search</button>
+        <button class="btn-ghost btn-icon" id="simBtn" onclick="openSim()" title="Simulate a fill with any property JSON — no login, no live session">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn-ghost btn-icon" id="jsonBtn" onclick="openJson()" title="View the prepared JSON for the selected hotel">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M8 4C6 4 6 6 6 7.5 6 9 6 10 4.5 10v4C6 14 6 15 6 16.5 6 18 6 20 8 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 4c2 0 2 2 2 3.5C18 9 18 10 19.5 10v4C18 14 18 15 18 16.5 18 18 18 20 16 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div id="results" class="results"></div>
+
+      <div id="selected"></div>
+
+      <div class="editor-actions">
+        <label class="toggle" title="Fill every field; invent dummy data for gaps so no page stalls">
+          <input type="checkbox" id="autopilot"><span class="track"></span>Autopilot
+        </label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- OTA grid -->
+  <main>
+    <div class="grid-head">
+      <h2>Channels</h2>
+      <span class="hint" id="grid-hint">loading…</span>
+    </div>
+    <div id="otas" class="otas"></div>
+  </main>
+</div>
+
+<div class="footnote">Each channel is a separate, isolated session. Pressing <b>Stop</b> halts only that channel.</div>
+
+<!-- JSON viewer modal -->
+<div id="jsonModal" class="modal" onclick="if(event.target===this)closeJson()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="mh-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M8 4C6 4 6 6 6 7.5 6 9 6 10 4.5 10v4C6 14 6 15 6 16.5 6 18 6 20 8 20" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 4c2 0 2 2 2 3.5C18 9 18 10 19.5 10v4C18 14 18 15 18 16.5 18 18 18 20 16 20" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <div style="min-width:0">
+        <span class="mt">Property details</span>
+        <span class="ms" id="jsonModalName"></span>
+      </div>
+      <div class="vtabs">
+        <button class="vtab active" id="viewForm" onclick="toggleView('form')">Table</button>
+        <button class="vtab" id="viewRaw" onclick="toggleView('raw')">JSON</button>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:7px">
+        <button class="btn-ghost btn-sm" onclick="copyJson(this)">Copy</button>
+        <button class="btn-ghost btn-sm" onclick="closeJson()">Close ✕</button>
+      </div>
+    </div>
+    <div class="formwrap" id="formwrap" data-table-host></div>
+    <textarea class="modal-edit" id="jsonModalEdit" spellcheck="false" style="display:none"
+      placeholder="Edit the property JSON…"></textarea>
+    <div class="modal-foot">
+      <span class="st" id="jsonModalStatus"></span>
+      <span class="sp"></span>
+      <button class="btn-ghost btn-sm" onclick="revertJson()" title="Discard edits, reload from MIS">Revert</button>
+      <button class="btn-ok btn-sm" onclick="saveJson(this)">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Simulate (offline dry-run) modal -->
+<div id="simModal" class="modal" onclick="if(event.target===this)closeSim()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="mh-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="#fff"/></svg></span>
+      <div style="min-width:0">
+        <span class="mt">Use your own JSON</span>
+        <span class="ms">paste JSON → convert to a table → it becomes your active property for any OTA</span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:7px;align-items:center">
+        <span class="sim-scope" id="simScope">all channels</span>
+        <button class="btn-ghost btn-sm" onclick="closeSim()">Close ✕</button>
+      </div>
+    </div>
+    <div class="sim-body">
+      <div class="sim-col">
+        <div class="sim-lab" style="display:flex;align-items:center;gap:8px">
+          Property details
+          <div class="vtabs" style="margin-left:auto">
+            <button class="vtab active" id="simViewForm" onclick="toggleSimView('form')">Table</button>
+            <button class="vtab" id="simViewRaw" onclick="toggleSimView('raw')">JSON</button>
+          </div>
+        </div>
+        <div class="formwrap" id="simForm" data-table-host
+          style="border:1px solid var(--line);border-radius:10px;min-height:340px;max-height:52vh"></div>
+        <textarea id="simJson" class="modal-edit" spellcheck="false" style="display:none;min-height:340px;border:1px solid var(--line);border-radius:10px"
+          placeholder='{ "property_id": "...", "property_type": "hotel", "display_name": "...", "address": {…}, "contact": {…}, "compliance": {…}, "room_types": [ … ] }'></textarea>
+      </div>
+      <div class="sim-col">
+        <div class="sim-lab">Result</div>
+        <div id="simResult" class="sim-result"><span class="muted">Pick an OTA, paste/keep the JSON, then Run.</span></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="st" id="simStatus"></span>
+      <span class="sp"></span>
+      <button class="btn-ghost btn-sm" onclick="loadSimDemo(this)" title="Load the demo property JSON">Load demo</button>
+      <button class="btn-ghost btn-sm" onclick="runSim(this)" title="Optional: dry-run the offline handlers against this JSON">▶ Test fill</button>
+      <button class="btn-ok btn-sm" onclick="closeSim()" title="Done — this is your active property; click an OTA to Connect &amp; Fill">✓ Done — pick an OTA</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sim-scope{font-size:10.5px;font-weight:600;color:var(--brand);background:#eef0fb;border:1px solid #dfe2f6;
+    border-radius:999px;padding:3px 10px;letter-spacing:.2px}
+  .sim-result h3{margin:12px 0 4px;font-size:12.5px;display:flex;align-items:center;gap:7px}
+  .sim-result h3 .chan-dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .sim-body{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 16px}
+  .sim-col{min-width:0;display:flex;flex-direction:column;gap:6px}
+  .sim-lab{font-size:11.5px;font-weight:600;color:var(--ink)}
+  .sim-result{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe;min-height:340px;
+    max-height:52vh;overflow:auto;font-size:12px;line-height:1.5}
+  .sim-result .ok{color:var(--ok);font-weight:600}
+  .sim-result .bad{color:var(--err);font-weight:600}
+  .sim-result .warn{color:#b26a00}
+  .sim-result h4{margin:10px 0 5px;font-size:12px}
+  .sim-result .pill-step{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;background:#eef1f8;margin-left:6px}
+  .sim-result table{width:100%;border-collapse:collapse;margin:3px 0 8px}
+  .sim-result td{padding:3px 6px;border-bottom:1px solid #eef1f6;vertical-align:top}
+  .sim-result td.k{color:var(--faint);white-space:nowrap;width:42%}
+  .sim-result .miss{color:var(--err)}
+  .sim-result pre{white-space:pre-wrap;background:#fff4f4;border:1px solid #f3c9c9;border-radius:8px;padding:8px;color:#9b2c2c;font-size:11px}
+</style>
+
+<script>
+const api=(u,o)=>fetch(u,o).then(async r=>{ if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||r.status); return r.json(); });
+const polls={}; const LAST={};
+
+const BRAND={
+  booking_com:{c:'#003b95'}, makemytrip:{c:'#e0530d'}, agoda:{c:'#2f6df6'},
+  expedia:{c:'#1d1d57'}, airbnb:{c:'#ff385c'},
+};
+const DOMAIN={
+  booking_com:'booking.com', makemytrip:'makemytrip.com', agoda:'agoda.com',
+  expedia:'expedia.com', airbnb:'airbnb.com',
+};
+const STATE={
+  idle:{t:'Idle',cls:''}, starting:{t:'Opening…',cls:'busy'}, connected:{t:'Connected',cls:'ok'},
+  filling:{t:'Filling…',cls:'busy'}, awaiting_captcha:{t:'Action needed',cls:'warn'},
+  awaiting_otp:{t:'Enter code',cls:'warn'}, error:{t:'Error',cls:'err'},
+};
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// the picked hotel's converted profile lives here; the OTA Fill buttons use it
+let SELECTED=null, SELECTED_MISSING=[];
+function getProfile(){
+  if(!SELECTED){ alert('Search for a hotel and pick one first.'); return null; }
+  return JSON.parse(JSON.stringify(SELECTED));   // a copy, so autopilot flag never sticks
+}
+function inits(name){ const p=(name||'?').trim().replace(/^(hotel|the)\s+/i,'').split(/\s+/); return ((p[0]||'?')[0]||'?').toUpperCase(); }
+
+let searchTimer=null;
+async function searchHotels(){
+  const q=document.getElementById('q').value.trim();
+  const box=document.getElementById('results');
+  const btn=document.getElementById('searchBtn'); btn.disabled=true; const ot=btn.textContent; btn.textContent='Searching…';
+  try{
+    const d=await api('/api/mis/search?q='+encodeURIComponent(q));
+    if(!d.results.length){ box.innerHTML='<div class="empty">🔍 No hotels matched “'+esc(q)+'”.<br><span style="color:var(--faint)">Try a shorter or different name.</span></div>'; }
+    else box.innerHTML=d.results.map(h=>`
+      <div class="result" onclick="pickHotel('${esc(h.id)}',this)">
+        <div class="rico">${inits(h.name)}</div>
+        <div class="rmeta"><div class="rname">${esc(h.name||h.id)}</div>
+          <div class="rsub">${esc([h.city,h.state].filter(Boolean).join(', ')||h.id)}</div></div>
+        <svg class="rgo" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>`).join('');
+  }catch(e){ box.innerHTML='<div class="empty">Search failed: '+esc(e.message)+'</div>'; }
+  finally{ btn.disabled=false; btn.textContent=ot; }
+}
+
+const money=(c,n)=> (n==null?'':(c==='INR'?'₹':'')+Number(n).toLocaleString('en-IN'));
+async function pickHotel(id,el){
+  document.querySelectorAll('.result').forEach(r=>r.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const sel=document.getElementById('selected');
+  sel.innerHTML='<div class="selected" style="padding:14px;font-size:12.5px;color:var(--muted)">Preparing data…</div>';
+  let d; try{ d=await api('/api/mis/hotel/'+encodeURIComponent(id)); }
+  catch(e){ sel.innerHTML='<div class="selected" style="padding:14px;color:var(--err);font-size:12.5px">Couldn’t prepare this hotel: '+esc(e.message)+'</div>'; SELECTED=null; return; }
+  SELECTED=d.profile; SELECTED_MISSING=d.missing||[];
+  renderSelected(d.summary, d.profile);
+}
+
+function prettyField(p){ return p.replace(/\.(\d+)\./g,' $1 ').replace(/\./g,' ').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).trim(); }
+
+function renderSelected(s, profile){
+  const rooms=(s.room_types||[]).map(r=>{
+    const plans=(r.rate_plans||[]).map(p=>`<span class="rate">${esc(p.code)} <b>${money(s.currency,p.price)}</b></span>`).join('');
+    return `<div class="sc-room"><span class="rn">${esc(r.name||'')}</span>
+      <span style="color:var(--faint)">×${r.count||1}</span>
+      <span class="rp">${plans||`<span class="rate"><b>${money(s.currency,r.base_rate)}</b></span>`}</span></div>`;
+  }).join('');
+  const warn = (SELECTED_MISSING&&SELECTED_MISSING.length) ? `
+      <div class="sc-warn" onclick="openJson()">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="#b45309" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><b>${SELECTED_MISSING.length} field${SELECTED_MISSING.length>1?'s':''} missing from the database.</b> Click to fill: ${SELECTED_MISSING.map(prettyField).join(', ')}.</div>
+      </div>` : '';
+  document.getElementById('selected').innerHTML=`
+    <div class="selected">
+      <div class="sc-top">
+        <div class="sc-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 10h0M15 10h0M9 13h0M15 13h0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="min-width:0">
+          <div class="sc-name">${esc(s.name||'')}</div>
+          <div class="sc-loc">${esc([s.city,s.state].filter(Boolean).join(', '))}${s.stars?' · '+s.stars+'★':''}</div>
+        </div>
+        <button class="btn-ghost btn-sm sc-x" onclick="clearSelected()" title="Clear">✕</button>
+      </div>
+      <div class="sc-stats">
+        <div class="sc-stat"><b>${s.total_rooms||0}</b><span>Rooms</span></div>
+        <div class="sc-stat"><b>${(s.room_types||[]).length}</b><span>Types</span></div>
+        <div class="sc-stat"><b>${s.photos||0}</b><span>Photos</span></div>
+        <div class="sc-stat"><b>${s.amenities||0}</b><span>Amenities</span></div>
+      </div>
+      ${warn}
+      <div class="sc-rooms">${rooms}</div>
+      <div style="padding:11px 14px;border-top:1px solid var(--line2)">
+        <button class="btn" style="width:100%;justify-content:center" onclick="openJson()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M13.5 6.5l3 3" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>
+          Edit details
+        </button>
+      </div>
+    </div>`;
+}
+function clearSelected(){ SELECTED=null; SELECTED_MISSING=[]; document.getElementById('selected').innerHTML='';
+  document.querySelectorAll('.result').forEach(r=>r.classList.remove('active')); }
+
+// ---- property viewer / editor (table for non-tech users, JSON for power users) ----
+let WORKING=null, VIEW='form';
+const clone=o=>JSON.parse(JSON.stringify(o));
+function setJsonStatus(msg,cls){ const s=document.getElementById('jsonModalStatus'); s.className='st '+(cls||''); s.textContent=msg||''; }
+
+// type hints so null fields still get the right input
+const NUM_FIELDS=new Set(['star_rating','latitude','longitude','count','max_adults','max_children','size_sqm','base_rate','price','free_stay_under_age','min_checkin_age','pet_fee','extra_bed_fee','crib_fee','price_per_person','free_cancellation_until_hours','bed_count']);
+const BOOL_FIELDS=new Set(['is_currently_open','smoking','extra_bed_available','wifi','free','available','included_in_rate','on_site','reservation_needed','swimming_pool','spa','fitness_center','restaurant','bar','room_service','airport_shuttle','laundry','business_center','ev_charging','elevator','family_rooms','smoking_allowed','pets_allowed','children_allowed','crib_available','is_24h']);
+const READONLY=new Set(['property_id']);
+// fields hidden from the Table view to keep it clean (still present in the JSON tab)
+const HIDE_FIELDS=new Set([
+  'owner_nationality',
+  'property_email','property_phone','website','chain_name','year_built',
+  'min_checkin_age','accepted_ids','smoking_allowed','quiet_hours_from','quiet_hours_until',
+  'pets_allowed','pet_fee','payment_methods','house_rules',
+  'min_age','free_stay_under_age','extra_bed_fee','crib_available',
+  'opening_date','is_currently_open',
+]);
+function humanize(k){ return k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+function singular(k){ return humanize(k).replace(/ies$/,'y').replace(/s$/,''); }
+const escA=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+// fields with a known, fixed set of values → render as a dropdown (prevents typos / invalid values).
+const IN_STATES=['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
+const ENUM={
+  property_type:['hotel','apartment','aparthotel','guesthouse','homestay','bnb','hostel','resort','villa','holiday_home'],
+  listing_scope:['single_property','property_group'],
+  location_type:['city_centre','suburb','beach','lakeside','countryside','mountain','near_airport','near_station'],
+  business_type:['business','individual'],
+  owner_kind:['individual','individual_running_a_business','company'],
+  bathroom:['private','shared'],
+  bed_type:['single','double','queen','king','twin','bunk','sofa_bed'],
+  cancellation_tier:['flexible','moderate','strict','non_refundable'],
+  prepayment:['none','partial','full'],
+  account_type:['savings','current'],
+  check_in_method:['reception_24h','self_check_in','lockbox','host'],
+  view:['sea','city','garden','pool','mountain'],
+  coverage:['none','rooms','public_areas','all_areas'],
+  currency:['INR','USD','EUR','GBP','AED','SGD','AUD'],
+  country:['IN','US','GB','AE','SG','AU','NP','LK'],
+  state:IN_STATES,
+};
+const ENUM_LABELS={IN:'India (IN)',US:'United States (US)',GB:'United Kingdom (GB)',AE:'UAE (AE)',SG:'Singapore (SG)',AU:'Australia (AU)',NP:'Nepal (NP)',LK:'Sri Lanka (LK)'};
+function enumFor(path,key){
+  if(path.endsWith('parking.type')) return ['none','free','paid'];
+  if(path.endsWith('breakfast.type')) return ['none','continental','buffet','a_la_carte','asian','vegetarian','full_english'];
+  return ENUM[key] || null;
+}
+function optLabel(o){ return ENUM_LABELS[o] || (/^[A-Z]{3}$/.test(o) ? o : humanize(o)); }
+
+function fieldRow(path,key,val){
+  const human=humanize(key), miss=(val===null||val===undefined||val==='');
+  if(READONLY.has(key))
+    return `<div class="frow"><div class="fk">${human}</div><div class="fv"><span class="ro">${escA(val||'')}</span></div></div>`;
+  const isBool = typeof val==='boolean' || (val==null && BOOL_FIELDS.has(key));
+  const choices = isBool ? null : enumFor(path,key);
+  const isNum  = typeof val==='number'  || (val==null && NUM_FIELDS.has(key));
+  let input;
+  if(isBool){
+    input=`<select data-path="${path}" data-kind="bool" onchange="patchField(this)">
+      <option value="" ${val==null?'selected':''}>— not set —</option>
+      <option value="true" ${val===true?'selected':''}>Yes</option>
+      <option value="false" ${val===false?'selected':''}>No</option></select>`;
+  } else if(choices){
+    let opts=`<option value="" ${miss?'selected':''}>— not set —</option>`;
+    let found=false;
+    for(const o of choices){ const sel=(String(val)===o)?'selected':''; if(sel) found=true; opts+=`<option value="${escA(o)}" ${sel}>${escA(optLabel(o))}</option>`; }
+    if(!miss && !found) opts+=`<option value="${escA(val)}" selected>${escA(val)}</option>`;  // preserve an unknown current value
+    input=`<select data-path="${path}" data-kind="str" onchange="patchField(this)">${opts}</select>`;
+  } else if(isNum){
+    input=`<input type="number" step="any" data-path="${path}" data-kind="num" value="${val==null?'':val}" placeholder="not set" oninput="patchField(this)">`;
+  } else {
+    input=`<input type="text" data-path="${path}" data-kind="str" value="${val==null?'':escA(val)}" placeholder="not set" oninput="patchField(this)">`;
+  }
+  return `<div class="frow ${miss?'miss':''}"><div class="fk">${human}${miss?' <span class="notset">not set</span>':''}</div><div class="fv">${input}</div></div>`;
+}
+
+function renderNode(obj,prefix){
+  let html='';
+  for(const k in obj){
+    const path=prefix?prefix+'.'+k:k, v=obj[k];
+    if(HIDE_FIELDS.has(k)) continue;            // kept in JSON, hidden from the Table
+    if(k==='photos'){ html+=`<div class="frow"><div class="fk">Photos</div><div class="fv"><span class="ro">${(v||[]).length} photos (from MIS — managed automatically)</span></div></div>`; continue; }
+    if(Array.isArray(v)){
+      if(v.length && typeof v[0]==='object'){
+        html+=`<div class="fsh">${humanize(k)}</div>`;
+        v.forEach((el,i)=>{ html+=`<div class="fgroup"><div class="fgroup-t">${singular(k)} ${i+1}${el && el.name?' — '+escA(el.name):''}</div>${renderNode(el,path+'.'+i)}</div>`; });
+      } else {
+        const miss=!v||!v.length;
+        html+=`<div class="frow ${miss?'miss':''}"><div class="fk">${humanize(k)}${miss?' <span class="notset">empty</span>':''}</div><div class="fv"><textarea data-path="${path}" data-kind="list" rows="${Math.min(10,Math.max(2,(v||[]).length))}" oninput="patchField(this)" placeholder="one per line">${escA((v||[]).join('\n'))}</textarea></div></div>`;
+      }
+    } else if(v!==null && typeof v==='object'){
+      html+=`<div class="fsh">${humanize(k)}</div><div class="fgroup">${renderNode(v,path)}</div>`;
+    } else {
+      html+=fieldRow(path,k,v);
+    }
+  }
+  return html;
+}
+
+// mount a field→value table for `obj` into `host`; the host owns its working object
+function mountTable(host, obj){
+  host._working = obj;
+  host.innerHTML = '<div class="fsh">Property</div>' + renderNode(obj,'');
+}
+function showForm(){ mountTable(document.getElementById('formwrap'), WORKING); }
+function setPath(o,path,val){
+  const ks=path.split('.'); let c=o;
+  for(let i=0;i<ks.length-1;i++) c=c[ks[i]];
+  c[ks[ks.length-1]]=val;
+}
+function patchField(el){
+  const path=el.dataset.path, kind=el.dataset.kind; let v;
+  if(kind==='bool') v = el.value===''?null:(el.value==='true');
+  else if(kind==='num') v = el.value.trim()===''?null:Number(el.value);
+  else if(kind==='list') v = el.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  else v = el.value===''?null:el.value;
+  const host = el.closest('[data-table-host]');
+  setPath(host ? host._working : WORKING, path, v);   // write to THIS table's object
+  const row=el.closest('.frow');
+  if(row){ const empty=(v==null||v===''||(Array.isArray(v)&&!v.length));
+    row.classList.toggle('miss',empty);
+    const fk=row.querySelector('.fk'); const tag=fk&&fk.querySelector('.notset');
+    if(empty && !tag && fk) fk.insertAdjacentHTML('beforeend',' <span class="notset">not set</span>');
+    if(!empty && tag) tag.remove();
+  }
+}
+
+function openJson(){
+  if(!SELECTED){ alert('Search for a hotel and pick one first — then you can view & edit its details.'); return; }
+  WORKING=clone(SELECTED); VIEW='form';
+  document.getElementById('jsonModalName').textContent = SELECTED.display_name || SELECTED.property_id || '';
+  document.getElementById('viewForm').classList.add('active');
+  document.getElementById('viewRaw').classList.remove('active');
+  document.getElementById('formwrap').style.display='block';
+  document.getElementById('jsonModalEdit').style.display='none';
+  showForm(); setJsonStatus('','');
+  document.getElementById('jsonModal').classList.add('open');
+}
+function closeJson(){ document.getElementById('jsonModal').classList.remove('open'); }
+function revertJson(){
+  WORKING=clone(SELECTED);
+  if(VIEW==='form') showForm(); else document.getElementById('jsonModalEdit').value=JSON.stringify(WORKING,null,2);
+  setJsonStatus('Reverted to the last saved version.','');
+}
+function toggleView(target){
+  if(target===VIEW) return;
+  if(VIEW==='raw'){                       // leaving raw → sync edits into WORKING
+    try{ WORKING=JSON.parse(document.getElementById('jsonModalEdit').value); }
+    catch(e){ setJsonStatus('Fix the JSON before switching to Table: '+e.message,'bad'); return; }
+  }
+  VIEW=target; setJsonStatus('','');
+  document.getElementById('viewForm').classList.toggle('active',target==='form');
+  document.getElementById('viewRaw').classList.toggle('active',target==='raw');
+  const fw=document.getElementById('formwrap'), ta=document.getElementById('jsonModalEdit');
+  if(target==='form'){ fw.style.display='block'; ta.style.display='none'; showForm(); }
+  else { ta.value=JSON.stringify(WORKING,null,2); ta.style.display='block'; fw.style.display='none'; }
+}
+async function saveJson(btn){
+  if(VIEW==='raw'){
+    try{ WORKING=JSON.parse(document.getElementById('jsonModalEdit').value); }
+    catch(e){ setJsonStatus('Invalid JSON: '+e.message,'bad'); return; }
+  }
+  const o=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:WORKING})});
+    if(!r.ok){ setJsonStatus('Some values are invalid — not saved:\n'+r.error,'bad'); return; }
+    SELECTED=clone(WORKING);              // edits now drive the OTA fill
+    SELECTED_MISSING=[];                  // a valid save means nothing required is missing
+    renderSelected(r.summary, SELECTED);  // refresh the card (rooms/photos/rate pills)
+    setJsonStatus('✓ Saved — these details will be used for every channel.','ok');
+  }catch(e){ setJsonStatus('Save failed: '+e.message,'bad'); }
+  finally{ btn.disabled=false; btn.textContent=o; }
+}
+async function copyJson(btn){
+  const t=JSON.stringify(WORKING||SELECTED||{},null,2);
+  let ok=false;
+  try{ await navigator.clipboard.writeText(t); ok=true; }
+  catch(e){ try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(_){} }
+  if(btn){ const o=btn.textContent; btn.textContent=ok?'✓ Copied':'⚠'; setTimeout(()=>btn.textContent=o,1100); }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeJson(); });
+
+async function init(){
+  let list;
+  try{ list=(await api('/api/otas')).otas; }catch(e){ list=[{id:'booking_com',label:'Booking.com'}]; }
+  document.getElementById('otas').innerHTML = list.map(o=>panelHTML(o.id,o.label)).join('');
+  document.getElementById('grid-hint').textContent = list.length+' channels · independent sessions';
+  list.forEach(o=>startPolling(o.id));
+  searchHotels();   // show the available hotels straight away
+}
+
+function brandColor(id){ return (BRAND[id]||{}).c || '#4f46e5'; }
+function initials(label){ const p=(label||'?').replace(/[^A-Za-z0-9 ].*/,'').trim().split(/\s+/); return ((p[0]||'?')[0]+'' ).toUpperCase(); }
+function logoImg(id){
+  const d=DOMAIN[id]; if(!d) return '';
+  // real brand logo (clearbit) → favicon fallback → letter badge (when img is removed)
+  return `<img alt="" src="https://logo.clearbit.com/${d}" `+
+    `onload="this.closest('.logo').classList.add('has-img')" `+
+    `onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://www.google.com/s2/favicons?domain=${d}&amp;sz=128';}else{this.remove();}">`;
+}
+
+function panelHTML(id,label){
+  return `<div class="ota" id="ota-${id}" style="--bc:${brandColor(id)}">
+    <div class="ota-head">
+      <div class="logo">${logoImg(id)}<span class="ini">${initials(label)}</span></div>
+      <div class="ota-title">
+        <h3>${esc(label)}</h3>
+        <div class="sub">${id}</div>
+      </div>
+      <div id="state-${id}" class="pill"><span class="dot"></span>Idle</div>
+    </div>
+    <div class="ota-body">
+      <div class="actions">
+        <button class="btn" onclick="connect('${id}')"><svg viewBox="0 0 24 24" fill="none"><path d="M9 7V5a3 3 0 0 1 6 0v2m-9 4h12l-1 9H7L6 11z" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Connect</button>
+        <button class="btn-ok" onclick="fill('${id}')"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="#fff"/></svg>Fill</button>
+        <button class="btn-stop" onclick="stopFill('${id}')"><svg viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>Stop</button>
+        <button class="btn-ghost" onclick="record('${id}')" title="Capture this page’s structure">●&nbsp;Record</button>
+      </div>
+      <div id="gate-${id}"></div>
+      <div class="logbar">
+        <span class="lab"><span class="ldot"></span>Live log</span>
+        <button class="btn-ghost btn-sm" onclick="copyLog('${id}',this)">Copy</button>
+      </div>
+      <div id="log-${id}" class="log"><span class="muted">No activity yet — Connect, then Fill.</span></div>
+    </div>
+  </div>`;
+}
+
+function startPolling(id){ if(polls[id]) return; polls[id]=setInterval(()=>refresh(id),1300); refresh(id); }
+
+function updateStats(){
+  const v=Object.values(LAST); let conn=0,fill=0;
+  v.forEach(s=>{ if(s==='filling'){fill++;conn++;} else if(['connected','awaiting_captcha','awaiting_otp'].includes(s)) conn++; });
+  document.getElementById('stat-conn').textContent=conn;
+  document.getElementById('stat-fill').textContent=fill;
+  document.querySelector('#stat-chip .pip').style.background = fill? 'var(--busy)' : (conn? 'var(--ok)' : '#cbd3e2');
+}
+
+async function refresh(id){
+  let s; try{ s=await api('/api/connect/status?ota='+id); }catch(e){ return; }
+  LAST[id]=s.state; updateStats();
+  const meta=STATE[s.state]||{t:s.state,cls:''};
+  const pill=document.getElementById('state-'+id); if(!pill) return;
+  pill.className='pill '+meta.cls; pill.innerHTML='<span class="dot"></span>'+meta.t;
+  const card=document.getElementById('ota-'+id);
+  card.classList.toggle('busy', meta.cls==='busy'||meta.cls==='warn');
+
+  const lg=document.getElementById('log-'+id);
+  const lines=(s.log||[]);
+  lg.textContent = lines.length? lines.join('\n') : '';
+  if(!lines.length) lg.innerHTML='<span class="muted">No activity yet — Connect, then Fill.</span>';
+  lg.scrollTop=lg.scrollHeight;
+
+  const gate=document.getElementById('gate-'+id);
+  if(s.state==='awaiting_captcha'){
+    gate.innerHTML='<div class="gate">👉 <b>Solve the CAPTCHA / do the manual step</b> in the browser window, then '+
+      '<button class="btn-ok btn-sm" onclick="captchaDone(\''+id+'\')">Done ✓</button></div>';
+  }else if(s.state==='awaiting_otp'){
+    gate.innerHTML='<div class="gate"><b>Enter the verification code</b><br><div style="margin-top:8px">'+
+      '<input id="otp-'+id+'" placeholder="384726" inputmode="numeric"/>'+
+      '<button class="btn-ok btn-sm" onclick="submitOtp(\''+id+'\')">Submit</button></div></div>';
+  }else{ gate.innerHTML=''; }
+}
+
+async function connect(id){
+  const pill=document.getElementById('state-'+id); pill.className='pill busy'; pill.innerHTML='<span class="dot"></span>Opening…';
+  try{ await api('/api/connect?ota='+id,{method:'POST'}); }catch(e){}
+  startPolling(id);
+}
+async function fill(id){
+  const profile=getProfile(); if(!profile) return;
+  if(document.getElementById('autopilot').checked) profile.autopilot=true;
+  try{ await api('/api/fill-json?ota='+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile})}); }
+  catch(e){ alert('Connect to this channel first (and be on a form page).'); return; }
+  startPolling(id);
+}
+async function stopFill(id){ try{ await api('/api/fill/stop?ota='+id,{method:'POST'}); }catch(e){} refresh(id); }
+async function record(id){
+  try{ await api('/api/record-page?ota='+id,{method:'POST'}); }
+  catch(e){ alert('Connect to this channel first.'); return; }
+  startPolling(id);
+}
+async function captchaDone(id){ await api('/api/connect/captcha-done?ota='+id,{method:'POST'}); refresh(id); }
+async function submitOtp(id){
+  const code=(document.getElementById('otp-'+id)||{}).value||'';
+  await api('/api/connect/otp?ota='+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}); refresh(id);
+}
+async function copyLog(id,btn){
+  const t=document.getElementById('log-'+id).innerText||'';
+  let ok=false;
+  try{ await navigator.clipboard.writeText(t); ok=true; }
+  catch(e){ try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(_){} }
+  if(btn){ const o=btn.textContent; btn.textContent=ok?'✓ Copied':'⚠'; setTimeout(()=>btn.textContent=o,1100); }
+}
+// ---- Simulate (offline dry-run — global, all channels) ----
+let SIM_LABELS=null, SIM_WORKING=null, SIM_VIEW='form';
+function simSetView(v){
+  SIM_VIEW=v;
+  document.getElementById('simViewForm').classList.toggle('active',v==='form');
+  document.getElementById('simViewRaw').classList.toggle('active',v==='raw');
+  document.getElementById('simForm').style.display = v==='form'?'block':'none';
+  document.getElementById('simJson').style.display = v==='raw'?'block':'none';
+}
+async function openSim(){
+  if(!SIM_LABELS){
+    try{ SIM_LABELS={}; (await api('/api/otas')).otas.forEach(o=>SIM_LABELS[o.id]=o.label); }catch(e){ SIM_LABELS={}; }
+  }
+  const st=document.getElementById('simStatus');
+  // if a property is already active, edit IT directly (changes apply to every OTA)
+  SIM_WORKING = SELECTED || null;
+  if(SIM_WORKING){
+    mountTable(document.getElementById('simForm'), SIM_WORKING); simSetView('form');
+    st.innerHTML='Editing your active property. Close and click an OTA to Connect &amp; Fill.';
+  } else {
+    document.getElementById('simJson').value=''; simSetView('raw');
+    st.innerHTML='Paste a property JSON, then click <b>Table</b> to convert it.';
+  }
+  document.getElementById('simModal').classList.add('open');
+}
+function closeSim(){ document.getElementById('simModal').classList.remove('open'); }
+async function toggleSimView(target){
+  if(target===SIM_VIEW) return;
+  const st=document.getElementById('simStatus');
+  if(target==='raw'){                          // Table → JSON: just dump the working object
+    document.getElementById('simJson').value=JSON.stringify(SIM_WORKING||{},null,2);
+    simSetView('raw'); st.textContent=''; return;
+  }
+  // JSON → Table: CONVERT the pasted JSON to the full profile + make it the active property
+  const raw=document.getElementById('simJson').value.trim();
+  if(!raw){ st.innerHTML='<span style="color:var(--err)">Paste some property JSON first.</span>'; return; }
+  let obj; try{ obj=JSON.parse(raw); }
+  catch(e){ st.innerHTML='<span style="color:var(--err)">Invalid JSON: '+esc(e.message)+'</span>'; return; }
+  const tab=document.getElementById('simViewForm'); tab.disabled=true; st.innerHTML='Converting…';
+  try{
+    const r=await api('/api/mis/normalize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:obj})});
+    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Couldn’t convert: '+esc(r.error)+'</span>'; return; }
+    SIM_WORKING=r.profile; SELECTED=SIM_WORKING; SELECTED_MISSING=r.missing||[];   // now active
+    try{ renderSelected(r.summary, SELECTED); }catch(e){}
+    mountTable(document.getElementById('simForm'), SIM_WORKING); simSetView('form');
+    st.innerHTML='<span class="ok">✓ Converted &amp; set as your active property.</span> Edit if needed, then close and click an OTA to Connect &amp; Fill.';
+  } finally { tab.disabled=false; }
+}
+// current edited profile from whichever view is active (or null + an error shown)
+function simReadProfile(){
+  const st=document.getElementById('simStatus');
+  if(SIM_VIEW==='raw'){
+    const raw=document.getElementById('simJson').value.trim();
+    if(!raw){ st.innerHTML='<span style="color:var(--err)">Paste some property JSON first.</span>'; return null; }
+    try{ SIM_WORKING=JSON.parse(raw); }catch(e){ st.innerHTML='<span style="color:var(--err)">Invalid JSON: '+esc(e.message)+'</span>'; return null; }
+  }
+  if(!SIM_WORKING){ st.innerHTML='<span style="color:var(--err)">Nothing to simulate — pick a hotel or paste JSON.</span>'; return null; }
+  return SIM_WORKING;
+}
+function loadSimDemo(btn){
+  const o=btn.textContent; btn.disabled=true; btn.textContent='Loading…';
+  api('/api/properties/DEMO-HOTEL-01/json')
+    .then(j=>{ delete j.autopilot; SIM_WORKING=j;
+      if(SIM_VIEW==='form') mountTable(document.getElementById('simForm'), SIM_WORKING);
+      else document.getElementById('simJson').value=JSON.stringify(j,null,2); })
+    .catch(e=>{ document.getElementById('simStatus').innerHTML='<span style="color:var(--err)">No demo property found.</span>'; })
+    .finally(()=>{ btn.disabled=false; btn.textContent=o; });
+}
+async function runSim(btn){
+  const profile=simReadProfile(); if(!profile) return;
+  const st=document.getElementById('simStatus'); const out=document.getElementById('simResult');
+  const o=btn.textContent; btn.disabled=true; btn.textContent='Running…'; st.textContent='';
+  out.innerHTML='<span class="muted">Validating + driving the handlers across all channels…</span>';
+  try{
+    const r=await api('/api/simulate?ota=all',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile})});
+    out.innerHTML=renderSim(r);
+    const nchan=Object.keys(r.otas||{}).length;
+    st.innerHTML=r.ok?('<span class="ok">✓ validated</span> · '+(r.filled_total||0)+' field(s) filled across '+nchan+' channel(s) with offline handlers')
+                     :'<span style="color:var(--err)">✗ JSON failed validation</span>';
+  }catch(e){ out.innerHTML='<pre>'+esc(String(e.message||e))+'</pre>'; st.textContent=''; }
+  finally{ btn.disabled=false; btn.textContent=o; }
+}
+async function useForFill(btn){
+  const p=simReadProfile(); if(!p) return;
+  const st=document.getElementById('simStatus');
+  const o=btn.textContent; btn.disabled=true; btn.textContent='Loading…';
+  try{
+    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
+    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Won’t load — fix validation first: '+esc((r.error||'').split('\n')[0])+'</span>'; return; }
+    SELECTED=clone(p); SELECTED_MISSING=[];
+    try{ renderSelected(r.summary, SELECTED); }catch(e){}
+    btn.textContent='✓ Active property set';
+    st.innerHTML='<span class="ok">✓ Loaded as the active property — close this, Connect to the OTA, then press Fill.</span>';
+    setTimeout(()=>{ closeSim(); },1100);
+  }catch(e){ st.innerHTML='<span style="color:var(--err)">'+esc(String(e.message||e))+'</span>'; }
+  finally{ btn.disabled=false; setTimeout(()=>btn.textContent=o,1400); }
+}
+function renderSim(r){
+  let h='';
+  if(!r.validation || !r.validation.ok){
+    h+='<div class="bad">✗ Schema validation failed</div><pre>'+esc((r.validation&&r.validation.error)||'unknown error')+'</pre>';
+  }else{
+    h+='<div class="ok">✓ JSON is valid against PropertyProfile</div>';
+  }
+  const c=r.coverage||{};
+  if(c.present){
+    h+='<h4>Field coverage</h4>';
+    h+=`<div style="margin-bottom:6px">Rooms: <b>${c.rooms??'?'}</b> · Room types: <b>${c.room_types??'?'}</b> · Photos: <b>${c.photos??0}</b></div>`;
+    h+='<table>';
+    for(const k in c.present){ const ok=c.present[k];
+      h+=`<tr><td class="k">${esc(k)}</td><td>${ok?'<span class="ok">set</span>':'<span class="miss">— empty</span>'}</td></tr>`; }
+    h+='</table>';
+    (c.photo_warnings||[]).forEach(w=>{ h+='<div class="warn">⚠ '+esc(w)+'</div>'; });
+  }
+  const renderSteps=(steps)=>{
+    let x='';
+    (steps||[]).forEach(s=>{
+      x+=`<h4>${esc(s.step)}<span class="pill-step">${s.handler_fired?'handler fired':'no change'}</span></h4>`;
+      if(s.error){ x+='<pre>'+esc(s.error)+'</pre>'; }
+      else if((s.filled||[]).length){
+        x+='<table>';
+        s.filled.forEach(f=>{ x+=`<tr><td class="k">${esc(f.field)}</td><td><b>${esc(String(f.value))}</b></td></tr>`; });
+        x+='</table>';
+      }else{ x+='<div class="muted" style="margin-bottom:6px">nothing filled on this step</div>'; }
+    });
+    return x;
+  };
+  // global shape: per-channel sections; (fallback to flat steps for a single-OTA response)
+  const otas=r.otas||null;
+  if(otas){
+    const keys=Object.keys(otas);
+    if(keys.length){ h+='<h4 style="margin-top:12px">Channel handler dry-run</h4>'; }
+    keys.forEach(k=>{
+      const label=(SIM_LABELS&&SIM_LABELS[k])||k;
+      h+=`<h3><span class="chan-dot"></span>${esc(label)}<span class="pill-step">${otas[k].filled_total} filled</span></h3>`;
+      h+=renderSteps(otas[k].steps);
+    });
+  }else{
+    h+=renderSteps(r.steps);
+  }
+  (r.notes||[]).forEach(n=>{ h+='<div class="warn" style="margin-top:8px">ℹ '+esc(n)+'</div>'; });
+  return h||'<span class="muted">No result.</span>';
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSim(); });
+
+init();
+</script>
+</body>
+</html>

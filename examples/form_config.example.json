@@ -1,0 +1,20 @@
+{
+  "_note": "Config-driven form fill. `@path` values are pulled from stored property data when --property is passed (e.g. @contact.email). AgentQL resolves the aliases below to real elements; Playwright fills them locally. For a logged-in OTA wizard, set user_data_dir to a folder where you've logged in once.",
+
+  "url": "https://httpbin.org/forms/post",
+
+  "query": "{ customer_name_input telephone_input email_input comments_textarea submit_button }",
+
+  "fields": [
+    { "el": "customer_name_input", "value": "@contact.full_name", "action": "fill" },
+    { "el": "telephone_input",     "value": "@contact.phone",     "action": "fill" },
+    { "el": "email_input",         "value": "@contact.email",     "action": "fill" },
+    { "el": "comments_textarea",   "value": "@display_name",      "action": "fill" }
+  ],
+
+  "submit": "submit_button",
+  "success_text": "form",
+
+  "user_data_dir": null,
+  "screenshot_path": "form-run.png"
+}

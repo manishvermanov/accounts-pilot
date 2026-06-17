@@ -1,0 +1,19 @@
+{
+  "_note": "Booking.com property wizard, ONE page. Run `agentql-login` first to log in (CAPTCHA + OTP once); the session is saved in user_data_dir so this fill runs authenticated with NO CAPTCHA. AgentQL resolves the aliases below semantically — we refine them against the live page on the first run. @refs pull from stored property data via --property.",
+
+  "url": "https://admin.booking.com/",
+  "user_data_dir": "data/booking_profile",
+
+  "query": "{ property_name_input star_rating_dropdown address_line1_input city_input postal_code_input continue_button }",
+
+  "fields": [
+    { "el": "property_name_input",  "value": "@display_name",        "action": "fill" },
+    { "el": "address_line1_input",  "value": "@address.line1",       "action": "fill" },
+    { "el": "city_input",           "value": "@address.city",        "action": "fill" },
+    { "el": "postal_code_input",    "value": "@address.postal_code", "action": "fill" }
+  ],
+
+  "submit": "continue_button",
+  "success_text": "saved",
+  "screenshot_path": "booking-run.png"
+}

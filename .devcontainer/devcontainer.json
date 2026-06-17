@@ -1,0 +1,26 @@
+{
+  "name": "Accounts Pilot",
+  "build": { "dockerfile": "Dockerfile" },
+
+  // 8000 = the app UI,  6080 = noVNC (watch the browser). Both PRIVATE → only YOU,
+  // signed into your own GitHub, can open them. No app password, nothing shared.
+  "forwardPorts": [8000, 6080],
+  "portsAttributes": {
+    "8000": { "label": "Accounts Pilot UI", "visibility": "private", "onAutoForward": "notify" },
+    "6080": { "label": "Watch browser (noVNC)", "visibility": "private", "onAutoForward": "silent" }
+  },
+
+  // install Python deps + ensure the Chromium build matches the pinned playwright
+  "postCreateCommand": "pip install -r requirements.txt && python -m playwright install chromium",
+
+  "remoteEnv": {
+    "DISPLAY": ":99",
+    "AP_BROWSER_NO_SANDBOX": "true"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}

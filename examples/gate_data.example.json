@@ -1,0 +1,51 @@
+{
+  "_note": "DUMMY gate-step data for TEST-BCOM-UDR-001. These values are typed by a HUMAN at the GATE steps — the engine never auto-submits them (see ADR-005). All values are fake but format-valid. Copy to `examples/gate_data.json` (gitignored) and replace with real values when registering a real property. NEVER commit real bank/password values.",
+
+  "property_id": "TEST-BCOM-UDR-001",
+
+  "account": {
+    "_step": "GATE: create partner account",
+    "partner_email": "manager@lakeviewresidency-test.example",
+    "password": "Lk!View2026#Udr",
+    "_password_note": "12+ chars, mixed case + digit + symbol — meets Booking.com policy. Change before any real run."
+  },
+
+  "verification": {
+    "_step": "GATE: OTP / email + phone verification",
+    "otp_email": "manager@lakeviewresidency-test.example",
+    "otp_phone": "+919829012345",
+    "_note": "Booking.com sends a code to email and/or SMS. v1 = enter manually; v1.1 = auto-read."
+  },
+
+  "payout": {
+    "_step": "GATE: bank / payout details (HUMAN ONLY — never modeled in profile)",
+    "payee_type": "company",
+    "beneficiary_name": "Lakeview Hospitality Pvt Ltd",
+    "bank_name": "HDFC Bank",
+    "branch": "Udaipur Main Branch",
+    "account_number": "50100123456789",
+    "ifsc": "HDFC0001234",
+    "account_currency": "INR",
+    "_note": "Dummy account/IFSC — format-valid (IFSC = 4 letters + 0 + 6 alnum). Replace with the real hotel account."
+  },
+
+  "tax": {
+    "_step": "GATE-adjacent: tax / GST / legal entity",
+    "legal_entity_name": "Lakeview Hospitality Pvt Ltd",
+    "pan": "AABCL1234M",
+    "gstin": "08AABCL1234M1Z6",
+    "tax_registered": true,
+    "registered_state_code": "08",
+    "_note": "Rajasthan state code = 08. GSTIN embeds the PAN. PAN format = 5 letters + 4 digits + 1 letter."
+  },
+
+  "contract": {
+    "_step": "GATE: partner agreement / commission acceptance (HUMAN ONLY)",
+    "signatory_name": "Rohit Mehta",
+    "signatory_designation": "General Manager",
+    "authorised_to_sign": true,
+    "commission_pct_accepted": 15.0,
+    "agreement_version": "BCOM-IN-2026.1",
+    "_note": "Commission is illustrative (~15% typical India). A human reads and accepts the real terms each time."
+  }
+}

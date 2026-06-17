@@ -1,0 +1,44 @@
+{
+  "property_id": "GOA-002",
+  "listing_scope": "single_property",
+  "property_type": "resort",
+  "display_name": "Palm Cove Beach Resort",
+  "star_rating": 4,
+  "location_type": "beach",
+  "description": "A 48-room 4-star beachfront resort on Candolim Beach, North Goa, with two pools and a spa.",
+  "currency": "INR",
+  "opening_date": "2015-11-15",
+  "is_currently_open": true,
+  "address": {
+    "line1": "Beach Road, Candolim", "line2": "Near Aguada Fort",
+    "city": "Candolim", "state": "Goa", "country": "IN", "postal_code": "403515",
+    "latitude": 15.5189, "longitude": 73.7626
+  },
+  "contact": { "full_name": "Maria Fernandes", "email": "gm@palmcove-test.example", "phone": "+919812233445" },
+  "compliance": { "legal_entity_name": "Palm Cove Resorts LLP", "business_type": "business", "gstin": "30AAFCP5678Q1Z3", "pan": "AAFCP5678Q" },
+  "room_types": [
+    { "name": "Garden Room", "count": 20, "max_adults": 2, "max_children": 1, "beds": [{ "bed_type": "queen", "count": 1 }], "bathroom": "private", "size_sqm": 28.0, "base_rate": 5500, "currency": "INR", "room_amenities": ["ac", "tv", "wifi", "minibar"] },
+    { "name": "Sea-View Deluxe", "count": 20, "max_adults": 3, "max_children": 1, "beds": [{ "bed_type": "king", "count": 1 }], "bathroom": "private", "size_sqm": 34.0, "base_rate": 8200, "currency": "INR", "extra_bed_available": true, "room_amenities": ["ac", "tv", "wifi", "minibar", "balcony"] },
+    { "name": "Private Pool Villa", "count": 8, "max_adults": 4, "max_children": 2, "beds": [{ "bed_type": "king", "count": 2 }], "bathroom": "private", "size_sqm": 65.0, "base_rate": 16500, "currency": "INR", "extra_bed_available": true, "room_amenities": ["ac", "tv", "wifi", "minibar", "balcony", "bathtub", "private_pool"] }
+  ],
+  "facilities": {
+    "parking": { "available": true, "type": "free", "on_site": true },
+    "breakfast": { "available": true, "included_in_rate": true, "type": "buffet", "price_per_person": 0, "currency": "INR" },
+    "internet": { "wifi": true, "free": true, "coverage": "all_areas" },
+    "swimming_pool": true, "spa": true, "fitness_center": true, "restaurant": true, "bar": true,
+    "room_service": true, "airport_shuttle": true, "laundry": true, "elevator": true, "family_rooms": true,
+    "languages_spoken": ["English", "Hindi", "Konkani", "Portuguese"],
+    "accessibility": ["wheelchair_accessible_entrance"]
+  },
+  "photos": [
+    { "path": "examples/photos/goa_facade.jpg", "caption": "Resort facade" },
+    { "path": "examples/photos/goa_beach.jpg", "caption": "Private beach" }
+  ],
+  "policy": {
+    "checkin_from": "15:00", "checkout_until": "12:00",
+    "cancellation_tier": "strict", "free_cancellation_until_hours": 72, "prepayment": "full",
+    "min_checkin_age": 18, "smoking_allowed": false, "pets_allowed": true, "pet_fee": 1500,
+    "payment_methods": ["cash", "visa", "mastercard", "amex", "upi"],
+    "child_policy": { "children_allowed": true, "free_stay_under_age": 5, "extra_bed_fee": 1500, "crib_available": true, "crib_fee": 0 }
+  }
+}

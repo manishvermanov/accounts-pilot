@@ -1,0 +1,213 @@
+{
+  "property_id": "DEMO-HOTEL-01",
+  "listing_scope": "single_property",
+  "property_type": "hotel",
+  "display_name": "Maple Ridge Inn",
+  "star_rating": 3,
+  "location_type": "mountain",
+  "description": "A cosy mountain-view hotel surrounded by pine forest and quiet hills. Guests enjoy fresh air, valley views, and a calm retreat away from the city. Ideal for couples and families looking for a peaceful getaway.",
+  "currency": "INR",
+  "is_currently_open": true,
+  "address": {
+    "line1": "Mall Road",
+    "line2": "Near Manu Market",
+    "city": "Manali",
+    "state": "Himachal Pradesh",
+    "country": "IN",
+    "postal_code": "175131",
+    "latitude": 32.2432,
+    "longitude": 77.1892
+  },
+  "contact": {
+    "full_name": "Manish Verma",
+    "email": "testmanish8070@gmail.com",
+    "phone": "+918076707050"
+  },
+  "compliance": {
+    "legal_entity_name": "Maple Ridge Hospitality Pvt Ltd",
+    "business_type": "business",
+    "gstin": "02AABCM1234N1Z7",
+    "pan": "AABCM1234N"
+  },
+  "room_types": [
+    {
+      "name": "Standard Room",
+      "count": 6,
+      "max_adults": 2,
+      "max_children": 1,
+      "beds": [
+        {
+          "bed_type": "queen",
+          "count": 1
+        }
+      ],
+      "bathroom": "private",
+      "size_sqm": 18,
+      "base_rate": 2500,
+      "currency": "INR",
+      "room_amenities": [
+        "ac",
+        "tv",
+        "wifi",
+        "kettle"
+      ]
+    },
+    {
+      "name": "Deluxe Valley-View",
+      "count": 5,
+      "max_adults": 2,
+      "max_children": 2,
+      "beds": [
+        {
+          "bed_type": "king",
+          "count": 1
+        }
+      ],
+      "bathroom": "private",
+      "size_sqm": 24,
+      "base_rate": 3800,
+      "currency": "INR",
+      "extra_bed_available": true,
+      "room_amenities": [
+        "ac",
+        "tv",
+        "wifi",
+        "minibar",
+        "balcony"
+      ]
+    },
+    {
+      "name": "Family Suite",
+      "count": 3,
+      "max_adults": 4,
+      "max_children": 2,
+      "beds": [
+        {
+          "bed_type": "king",
+          "count": 1
+        },
+        {
+          "bed_type": "single",
+          "count": 2
+        }
+      ],
+      "bathroom": "private",
+      "size_sqm": 40,
+      "base_rate": 6200,
+      "currency": "INR",
+      "extra_bed_available": true,
+      "room_amenities": [
+        "ac",
+        "tv",
+        "wifi",
+        "minibar",
+        "balcony",
+        "sofa"
+      ]
+    }
+  ],
+  "facilities": {
+    "parking": {
+      "available": true,
+      "type": "free",
+      "on_site": true
+    },
+    "breakfast": {
+      "available": true,
+      "included_in_rate": false,
+      "type": "buffet",
+      "price_per_person": 300,
+      "currency": "INR"
+    },
+    "internet": {
+      "wifi": true,
+      "free": true,
+      "coverage": "all_areas"
+    },
+    "restaurant": true,
+    "room_service": true,
+    "laundry": true,
+    "elevator": true,
+    "family_rooms": true,
+    "languages_spoken": [
+      "English",
+      "Hindi"
+    ],
+    "other": [
+      "24x7 Front Desk",
+      "Power Backup"
+    ]
+  },
+  "amenities": [],
+  "photos": [
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\exterior.jpg",
+      "caption": "Hotel exterior - mountain view"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\exterior_2.jpg",
+      "caption": "Front entrance"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\lobby.jpg",
+      "caption": "Reception & lobby"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\standard_room.jpg",
+      "caption": "Standard Room",
+      "room_type": "Standard Room"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\deluxe_room.jpg",
+      "caption": "Deluxe Valley-View",
+      "room_type": "Deluxe Valley-View"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\family_suite.jpg",
+      "caption": "Family Suite",
+      "room_type": "Family Suite"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\bathroom.jpg",
+      "caption": "Private bathroom"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\restaurant.jpg",
+      "caption": "In-house restaurant"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\garden.jpg",
+      "caption": "Garden & valley view"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\corridor.jpg",
+      "caption": "Corridor"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\breakfast.jpg",
+      "caption": "Breakfast spread"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\view.jpg",
+      "caption": "Mountain view from room"
+    }
+  ],
+  "policy": {
+    "checkin_from": "13:00",
+    "checkout_until": "11:00",
+    "cancellation_tier": "moderate",
+    "payment_methods": [
+      "cash",
+      "upi",
+      "visa"
+    ],
+    "house_rules": [
+      "Valid Government ID mandatory at check-in",
+      "No refund on no-show"
+    ],
+    "child_policy": {
+      "children_allowed": true,
+      "free_stay_under_age": 6
+    }
+  }
+}

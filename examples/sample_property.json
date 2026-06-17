@@ -1,0 +1,60 @@
+{
+  "property_id": "DS-HOTEL-001",
+  "property_type": "hotel",
+  "display_name": "The Riverside Inn",
+  "description": "A 24-room boutique hotel on the Ganges, 5 min from the ghats.",
+  "address": {
+    "line1": "12 Riverfront Road",
+    "line2": "Assi Ghat",
+    "city": "Varanasi",
+    "state": "Uttar Pradesh",
+    "country": "IN",
+    "postal_code": "221005",
+    "latitude": 25.2820,
+    "longitude": 82.9739
+  },
+  "contact": {
+    "full_name": "Anita Sharma",
+    "email": "frontdesk@riversideinn.example",
+    "phone": "+919812345678"
+  },
+  "compliance": {
+    "legal_entity_name": "Riverside Hospitality Pvt Ltd",
+    "gstin": "09ABCDE1234F1Z5"
+  },
+  "room_types": [
+    {
+      "name": "Deluxe Double",
+      "count": 14,
+      "max_adults": 2,
+      "max_children": 1,
+      "beds": [{ "bed_type": "queen", "count": 1 }],
+      "size_sqm": 22.0,
+      "base_rate": 3200,
+      "currency": "INR"
+    },
+    {
+      "name": "River-View Suite",
+      "count": 10,
+      "max_adults": 3,
+      "max_children": 1,
+      "beds": [{ "bed_type": "king", "count": 1 }, { "bed_type": "single", "count": 1 }],
+      "size_sqm": 38.0,
+      "base_rate": 5400,
+      "currency": "INR"
+    }
+  ],
+  "amenities": ["wifi", "parking", "breakfast", "ac", "restaurant"],
+  "photos": [
+    { "path": "examples/photos/facade.jpg", "caption": "Hotel facade" },
+    { "path": "examples/photos/deluxe.jpg", "caption": "Deluxe Double room" }
+  ],
+  "policy": {
+    "checkin_from": "13:00",
+    "checkout_until": "11:00",
+    "cancellation": "free_until_48h",
+    "house_rules": ["No smoking in rooms"],
+    "children_allowed": true,
+    "pets_allowed": false
+  }
+}

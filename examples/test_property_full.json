@@ -1,0 +1,153 @@
+{
+  "property_id": "TEST-BCOM-UDR-001",
+  "listing_scope": "single_property",
+  "property_type": "hotel",
+  "display_name": "Hotel Lakeview Residency",
+  "star_rating": 3,
+  "location_type": "lakeside",
+  "description": "A 30-room 3-star hotel overlooking Fateh Sagar Lake in Udaipur. Rooftop restaurant, free parking, outdoor pool, 10 minutes from the City Palace. Family-run, full-service, open year-round.",
+  "currency": "INR",
+  "opening_date": "2018-10-01",
+  "is_currently_open": true,
+
+  "address": {
+    "line1": "47 Rani Road",
+    "line2": "Near Fateh Sagar Lake",
+    "city": "Udaipur",
+    "state": "Rajasthan",
+    "country": "IN",
+    "postal_code": "313001",
+    "latitude": 24.5894,
+    "longitude": 73.6790
+  },
+
+  "contact": {
+    "full_name": "Rohit Mehta",
+    "email": "manager@lakeviewresidency-test.example",
+    "phone": "+919829012345"
+  },
+
+  "compliance": {
+    "legal_entity_name": "Lakeview Hospitality Pvt Ltd",
+    "business_type": "business",
+    "gstin": "08AABCL1234M1Z6",
+    "pan": "AABCL1234M",
+    "business_registration_number": "U55101RJ2017PTC012345"
+  },
+
+  "reception": {
+    "is_24h": true,
+    "hours_from": null,
+    "hours_until": null
+  },
+
+  "room_types": [
+    {
+      "name": "Standard Double",
+      "count": 12,
+      "max_adults": 2,
+      "max_children": 1,
+      "beds": [{ "bed_type": "double", "count": 1 }],
+      "bathroom": "private",
+      "size_sqm": 20.0,
+      "base_rate": 2400,
+      "currency": "INR",
+      "smoking": false,
+      "extra_bed_available": false,
+      "room_amenities": ["ac", "tv", "wifi", "safe", "kettle"]
+    },
+    {
+      "name": "Deluxe Lake-View",
+      "count": 12,
+      "max_adults": 2,
+      "max_children": 2,
+      "beds": [{ "bed_type": "queen", "count": 1 }],
+      "bathroom": "private",
+      "size_sqm": 26.0,
+      "base_rate": 3800,
+      "currency": "INR",
+      "smoking": false,
+      "extra_bed_available": true,
+      "room_amenities": ["ac", "tv", "wifi", "safe", "minibar", "kettle", "balcony"]
+    },
+    {
+      "name": "Family Suite",
+      "count": 6,
+      "max_adults": 4,
+      "max_children": 2,
+      "beds": [
+        { "bed_type": "king", "count": 1 },
+        { "bed_type": "single", "count": 2 }
+      ],
+      "bathroom": "private",
+      "size_sqm": 42.0,
+      "base_rate": 6200,
+      "currency": "INR",
+      "smoking": false,
+      "extra_bed_available": true,
+      "room_amenities": ["ac", "tv", "wifi", "safe", "minibar", "kettle", "balcony", "sofa", "bathtub"]
+    }
+  ],
+
+  "facilities": {
+    "parking": { "available": true, "type": "free", "on_site": true, "reservation_needed": false },
+    "breakfast": { "available": true, "included_in_rate": false, "type": "buffet", "price_per_person": 350, "currency": "INR" },
+    "internet": { "wifi": true, "free": true, "coverage": "all_areas" },
+    "swimming_pool": true,
+    "spa": false,
+    "fitness_center": true,
+    "restaurant": true,
+    "bar": true,
+    "room_service": true,
+    "airport_shuttle": true,
+    "laundry": true,
+    "business_center": false,
+    "ev_charging": false,
+    "elevator": true,
+    "family_rooms": true,
+    "languages_spoken": ["English", "Hindi", "Rajasthani"],
+    "accessibility": ["wheelchair_accessible_entrance", "ground_floor_rooms"],
+    "other": ["airport_pickup_on_request", "tour_desk", "currency_exchange"]
+  },
+
+  "amenities": [],
+
+  "photos": [
+    { "path": "examples/photos/facade.jpg", "caption": "Hotel facade from Rani Road" },
+    { "path": "examples/photos/lobby.jpg", "caption": "Reception and lobby" },
+    { "path": "examples/photos/standard_double.jpg", "caption": "Standard Double room", "room_type": "Standard Double" },
+    { "path": "examples/photos/deluxe_lakeview.jpg", "caption": "Deluxe Lake-View room", "room_type": "Deluxe Lake-View" },
+    { "path": "examples/photos/family_suite.jpg", "caption": "Family Suite", "room_type": "Family Suite" },
+    { "path": "examples/photos/rooftop_restaurant.jpg", "caption": "Rooftop restaurant at dusk" },
+    { "path": "examples/photos/pool.jpg", "caption": "Outdoor pool" }
+  ],
+
+  "policy": {
+    "checkin_from": "14:00",
+    "checkout_until": "11:00",
+    "cancellation_tier": "moderate",
+    "free_cancellation_until_hours": 24,
+    "prepayment": "partial",
+    "min_checkin_age": 18,
+    "smoking_allowed": false,
+    "quiet_hours_from": "22:00",
+    "quiet_hours_until": "07:00",
+    "pets_allowed": false,
+    "pet_fee": null,
+    "payment_methods": ["cash", "visa", "mastercard", "amex", "upi"],
+    "house_rules": [
+      "No smoking in rooms",
+      "Quiet hours 22:00-07:00",
+      "Valid government photo ID required at check-in",
+      "Foreign nationals must complete Form-C"
+    ],
+    "child_policy": {
+      "children_allowed": true,
+      "min_age": 0,
+      "free_stay_under_age": 6,
+      "extra_bed_fee": 800,
+      "crib_available": true,
+      "crib_fee": 0
+    }
+  }
+}

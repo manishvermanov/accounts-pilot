@@ -1,0 +1,774 @@
+{
+  "property_id": "b9635fe2-6b18-4806-a7e0-dfa55792b5c3",
+  "listing_scope": "single_property",
+  "property_type": "hotel",
+  "display_name": "Hotel Manchester Royals LLP",
+  "star_rating": 3,
+  "location_type": "city_centre",
+  "description": "Hotel Manchester Royals LLP is located in Deopuri, Raipur, Infront of TATA Motors and Near Jai Ambey Hospital. The hotel offers comfortable air-conditioned rooms, free Wi-Fi, room service, 24-hour front desk support, housekeeping, and parking facilities. Ideal for business travelers, families, couples, and transit guests seeking a comfortable and convenient stay in Raipur.",
+  "address": {
+    "line1": "Hotel Manchester Royals LLP",
+    "line2": "Infront of TATA Motors, Near Jai ambey Hospital, Devpuri, Raipur, C.G",
+    "city": "Raipur",
+    "state": "Chhattisgarh",
+    "country": "IN",
+    "postal_code": "492015",
+    "latitude": 21.206712,
+    "longitude": 81.670484
+  },
+  "contact": {
+    "full_name": "Pradeep Kumar Sahu",
+    "email": "hotelmroyals@gmail.com",
+    "phone": "+919171290395"
+  },
+  "compliance": {
+    "legal_entity_name": "HOTEL MANCHESTER ROYALS LLP",
+    "business_type": "business",
+    "gstin": "",
+    "pan": "AATFH1830J",
+    "owner_kind": "individual_running_a_business",
+    "owner_first_name": "Pradeep Kumar",
+    "owner_last_name": "Sahu",
+    "owner_dob": "07-02-1988",
+    "gst_registered": false
+  },
+  "room_types": [
+    {
+      "name": "Deluxe",
+      "count": 9,
+      "max_adults": 2,
+      "max_children": 0,
+      "beds": [
+        {
+          "bed_type": "double",
+          "count": 1
+        }
+      ],
+      "bathroom": "private",
+      "size_sqm": 13.9,
+      "base_rate": 2000.0,
+      "currency": "INR",
+      "smoking": false,
+      "extra_bed_available": true,
+      "room_amenities": [
+        "Access Card",
+        "Attached Bathroom",
+        "Bathrobes",
+        "Bath Tub",
+        "Bay View",
+        "Bedsheets",
+        "Body Wash / Shampoo",
+        "Bottled Water",
+        "Carpeted",
+        "Ceiling Fan",
+        "Charging Points (Near Bed)",
+        "Cleaning products",
+        "Clothes rack",
+        "Coffee/Tea Maker",
+        "Dental Kit (if available)",
+        "Desk / Work Area",
+        "Dustbin",
+        "Extra Mattress (on request)",
+        "Feather pillow",
+        "Flat-screen TV",
+        "Full-length Mirror",
+        "Garden View",
+        "Geyser",
+        "Hairdryer",
+        "High Chair",
+        "Hot & Cold Water",
+        "Housekeeping (Daily)",
+        "In-Room Telephone",
+        "Intercom / Telephone",
+        "Key access",
+        "Local Snacks",
+        "Luggage Rack",
+        "Magnifying Mirror",
+        "Mini-fridge",
+        "Mirror",
+        "Mosquito net",
+        "OTT Apps (YouTube/Netflix etc.)",
+        "Pillows",
+        "Powder Room",
+        "Safe",
+        "Seating Area",
+        "Shaving Kit (if available)",
+        "Shower",
+        "Shower Cap",
+        "Slippers",
+        "Smart Lock",
+        "Smart TV",
+        "Soap",
+        "Television (LED)",
+        "Tile/Marble floor",
+        "Toilet Paper",
+        "Toiletries Kit",
+        "Towels",
+        "Walk-in closet",
+        "Wardrobe",
+        "Wine glasses",
+        "Workspace"
+      ],
+      "rate_plans": [
+        {
+          "code": "EP",
+          "name": "Room Only",
+          "price": 2000.0
+        },
+        {
+          "code": "CP",
+          "name": "Breakfast",
+          "price": 2400.0
+        }
+      ]
+    },
+    {
+      "name": "Super Deluxe",
+      "count": 6,
+      "max_adults": 2,
+      "max_children": 0,
+      "beds": [
+        {
+          "bed_type": "double",
+          "count": 1
+        }
+      ],
+      "bathroom": "private",
+      "size_sqm": 17.2,
+      "base_rate": 2500.0,
+      "currency": "INR",
+      "smoking": false,
+      "extra_bed_available": true,
+      "room_amenities": [
+        "Coffee/Tea Maker",
+        "Electric Kettle",
+        "Extra Mattress (on request)",
+        "Feather pillow",
+        "Hairdryer",
+        "Mini-fridge",
+        "Mosquito net",
+        "Pillows",
+        "Safe",
+        "Seating Area",
+        "Smart Lock",
+        "Smart TV",
+        "Toiletries Kit",
+        "Towels",
+        "Wardrobe",
+        "Workspace"
+      ],
+      "rate_plans": [
+        {
+          "code": "EP",
+          "name": "Room Only",
+          "price": 2500.0
+        },
+        {
+          "code": "CP",
+          "name": "Breakfast",
+          "price": 2900.0
+        }
+      ]
+    }
+  ],
+  "facilities": {
+    "parking": {
+      "available": true,
+      "type": "free",
+      "on_site": true,
+      "reservation_needed": false
+    },
+    "breakfast": {
+      "available": false,
+      "included_in_rate": false,
+      "type": "none",
+      "price_per_person": null,
+      "currency": "INR"
+    },
+    "internet": {
+      "wifi": true,
+      "free": true,
+      "coverage": "all_areas"
+    },
+    "swimming_pool": false,
+    "spa": true,
+    "fitness_center": false,
+    "restaurant": true,
+    "bar": true,
+    "room_service": true,
+    "airport_shuttle": true,
+    "laundry": true,
+    "business_center": true,
+    "ev_charging": true,
+    "elevator": true,
+    "family_rooms": false,
+    "languages_spoken": [
+      "English",
+      "Hindi"
+    ],
+    "accessibility": [
+      "wheelchair_accessible",
+      "ramp",
+      "accessible_bathroom",
+      "accessible_elevator"
+    ],
+    "other": []
+  },
+  "amenities": [
+    "24-Hour Security / Security Guard",
+    "24x7 Front Desk / Reception",
+    "Air Conditioning",
+    "Airport Shuttle",
+    "Airport Transfers",
+    "Astrologer Session",
+    "Ayurvedic Treatment",
+    "Badminton",
+    "Balcony/Terrace",
+    "Bar",
+    "Camping",
+    "Caretaker",
+    "CCTV",
+    "Couple Friendly",
+    "Cycling Trail",
+    "Designated smoking area",
+    "Diving",
+    "Doctor on Call",
+    "Early Check-in / Late Check-out (on request)",
+    "Elevator/Lift",
+    "Elevator with Accessibility",
+    "EV Charging Station",
+    "Fire Extinguishers",
+    "First-aid Services",
+    "Hotel",
+    "Housekeeping",
+    "Indoor play area",
+    "In-house Restaurant",
+    "Kitchen",
+    "LAN",
+    "Laundromat",
+    "Laundry",
+    "Luggage Storage",
+    "Massage",
+    "Medical Centre",
+    "Meeting Room",
+    "Newspaper",
+    "Parcel / Courier Service",
+    "Parking",
+    "Photocopying",
+    "Power Backup",
+    "Printer",
+    "Private Taxi",
+    "Puzzles",
+    "Ramp",
+    "Reception",
+    "Refrigerator",
+    "Restaurant",
+    "Room Service",
+    "Secured Parking",
+    "Self Check-in",
+    "Smoke-free property",
+    "Smoking Rooms",
+    "Spa",
+    "Street Parking",
+    "Terrace",
+    "Toilet with Grabrails",
+    "Travel Desk / Tour Assistance",
+    "TV",
+    "Wake-up Call Service",
+    "Wheelchair",
+    "WiFi"
+  ],
+  "photos": [
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\000_1781081832144_image_1781081832144_0.jpg",
+      "caption": "Exterior",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\001_1781081832180_image_1781081832180_0.jpg",
+      "caption": "Exterior",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\002_1781081832141_image_1781081832141_0.jpg",
+      "caption": "Exterior",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\003_1781081832172_image_1781081832172_0.jpg",
+      "caption": "Exterior",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\004_1781082147108_image_1781082147108_0.jpg",
+      "caption": "Exterior",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\005_1781081853080_image_1781081853080_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\006_1781081853093_image_1781081853093_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\007_1781081853117_image_1781081853117_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\008_1781081853351_image_1781081853351_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\009_1781081853398_image_1781081853398_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\010_1781081853498_image_1781081853498_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\011_1781081853512_image_1781081853512_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\013_1781081853608_image_1781081853608_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\014_1781081853690_image_1781081853690_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\015_1781081853710_image_1781081853710_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\016_1781081853729_image_1781081853729_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\017_1781081853810_image_1781081853810_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\018_1781081853820_image_1781081853820_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\019_1781081853896_image_1781081853896_0.jpg",
+      "caption": "Reception / Lobby",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\020_1781081939837_image_1781081939837_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\022_1781081939891_image_1781081939891_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\023_1781081939845_image_1781081939845_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\025_1781081939899_image_1781081939899_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\026_1781081940131_image_1781081940130_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\027_1781082005786_image_1781082005786_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\028_1781082005792_image_1781082005792_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\029_1781082005800_image_1781082005799_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\030_1781082005844_image_1781082005844_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\031_1781082005932_image_1781082005931_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\032_1781082005876_image_1781082005876_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\033_1781082005912_image_1781082005912_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\034_1781082005943_image_1781082005943_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\035_1781082005972_image_1781082005972_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\036_1781082006000_image_1781082006000_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\037_1781082006075_image_1781082006075_0.jpg",
+      "caption": "Rooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\038_1781081985966_image_1781081985966_0.jpg",
+      "caption": "Common Area",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\039_1781081887128_image_1781081887128_0.jpg",
+      "caption": "Entrance",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\040_1781081897545_image_1781081897545_0.jpg",
+      "caption": "Amenities / Facilities",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\041_1781081920909_image_1781081920909_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\042_1781081920908_image_1781081920908_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\045_1781082026936_image_1781082026936_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\046_1781082027074_image_1781082027073_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\047_1781082027103_image_1781082027103_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\048_1781082027100_image_1781082027100_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\049_1781082027099_image_1781082027099_0.jpg",
+      "caption": "Bathrooms",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\050_1781082172074_image_1781082172074_0.jpg",
+      "caption": "Others",
+      "room_type": null
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\051_1781086285027_image_1781086285027_0.jpg",
+      "caption": "Cover 1",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\052_1781086105808_image_1781086105808_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\053_1781086105908_image_1781086105908_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\054_1781086105858_image_1781086105858_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\056_1781086105971_image_1781086105971_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\057_1781086106003_image_1781086106003_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\058_1781086106026_image_1781086106026_0.jpg",
+      "caption": "Room View",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\059_1781086190687_image_1781086190687_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\060_1781086205756_image_1781086205756_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\061_1781086205788_image_1781086205788_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\062_1781086205798_image_1781086205798_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\063_1781086222186_image_1781086222186_0.jpg",
+      "caption": "Amenities",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\064_1781086261980_image_1781086261980_0.jpg",
+      "caption": "Amenities",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\065_1781086237243_image_1781086237243_0.jpg",
+      "caption": "Balcony",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\066_1781086254363_image_1781086254363_0.jpg",
+      "caption": "Others",
+      "room_type": "Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\067_1781086758457_image_1781086758457_0.jpg",
+      "caption": "Cover 1",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\068_1781086762168_image_1781086762168_0.jpg",
+      "caption": "Cover 2",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\069_1781086770293_image_1781086770293_0.jpg",
+      "caption": "Cover 3",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\070_1781086658857_image_1781086658857_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\071_1781086658889_image_1781086658889_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\072_1781086658886_image_1781086658886_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\073_1781086658918_image_1781086658917_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\074_1781086658942_image_1781086658942_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\075_1781086658970_image_1781086658970_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\076_1781086659024_image_1781086659024_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\077_1781086659023_image_1781086659023_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\078_1781086659053_image_1781086659053_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\079_1781086659112_image_1781086659112_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\080_1781086659132_image_1781086659132_0.jpg",
+      "caption": "Room View",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\081_1781086689571_image_1781086689571_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\082_1781086689577_image_1781086689577_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\083_1781086689615_image_1781086689615_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\084_1781086689649_image_1781086689649_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\085_1781086689683_image_1781086689683_0.jpg",
+      "caption": "Bathroom",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\086_1781086702633_image_1781086702633_0.jpg",
+      "caption": "Amenities",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\087_1781086712303_image_1781086712303_0.jpg",
+      "caption": "Amenities",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\088_1781086712346_image_1781086712346_0.jpg",
+      "caption": "Amenities",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\089_1781086718617_image_1781086718617_0.jpg",
+      "caption": "Balcony",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\090_1781086738208_image_1781086738208_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\091_1781086738226_image_1781086738226_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\092_1781086738267_image_1781086738267_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\093_1781086738291_image_1781086738291_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\094_1781086738340_image_1781086738340_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\095_1781086738383_image_1781086738383_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\096_1781086738420_image_1781086738420_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    },
+    {
+      "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\hotel-manchester-royals-llp\\097_1781086738475_image_1781086738475_0.jpg",
+      "caption": "Others",
+      "room_type": "Super Deluxe"
+    }
+  ],
+  "policy": {
+    "checkin_from": "11:00",
+    "checkout_until": "10:30",
+    "cancellation_tier": "moderate",
+    "free_cancellation_until_hours": null,
+    "prepayment": "none",
+    "min_checkin_age": null,
+    "smoking_allowed": false,
+    "quiet_hours_from": null,
+    "quiet_hours_until": null,
+    "pets_allowed": false,
+    "pet_fee": null,
+    "payment_methods": [],
+    "house_rules": [],
+    "child_policy": {
+      "children_allowed": true,
+      "min_age": null,
+      "free_stay_under_age": 6,
+      "extra_bed_fee": null,
+      "crib_available": false,
+      "crib_fee": null
+    }
+  },
+  "reception": {
+    "is_24h": true,
+    "hours_from": null,
+    "hours_until": null
+  },
+  "currency": "INR",
+  "opening_date": null,
+  "is_currently_open": true
+}
