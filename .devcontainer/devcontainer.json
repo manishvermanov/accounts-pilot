@@ -10,8 +10,9 @@
     "6080": { "label": "Watch browser (noVNC)", "visibility": "private", "onAutoForward": "silent" }
   },
 
-  // install Python deps + ensure the Chromium build matches the pinned playwright
-  "postCreateCommand": "pip install -r requirements.txt && python -m playwright install chromium",
+  // install deps into the SAME interpreter the start script runs (python -m), so
+  // `python -m uvicorn` always finds them; ensure the Chromium build matches playwright.
+  "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install -r requirements.txt && python -m playwright install chromium",
 
   "remoteEnv": {
     "DISPLAY": ":99",

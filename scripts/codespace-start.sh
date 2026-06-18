@@ -10,6 +10,14 @@ cd "$(dirname "$0")/.."
 export DISPLAY="${DISPLAY:-:99}"
 export AP_BROWSER_NO_SANDBOX=true
 
+# self-heal: if the deps aren't in THIS python (e.g. the build step didn't finish),
+# install them now so `python -m uvicorn` works.
+if ! python -m uvicorn --version >/dev/null 2>&1; then
+  echo "▸ installing Python deps (first run / build didn't finish) …"
+  python -m pip install -r requirements.txt
+  python -m playwright install chromium >/dev/null 2>&1 || true
+fi
+
 # clean any previous run (idempotent)
 pkill -f "Xvfb $DISPLAY" 2>/dev/null || true
 pkill -f "x11vnc"        2>/dev/null || true
