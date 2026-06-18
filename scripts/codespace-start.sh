@@ -14,7 +14,7 @@ export AP_BROWSER_NO_SANDBOX=true
 # install them now so `python -m uvicorn` works.
 if ! python -m uvicorn --version >/dev/null 2>&1; then
   echo "▸ installing Python deps (first run / build didn't finish) …"
-  python -m pip install -r requirements.txt
+  python -m pip install --ignore-installed -r requirements.txt
   python -m playwright install chromium >/dev/null 2>&1 || true
 fi
 
