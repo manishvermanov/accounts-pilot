@@ -18,7 +18,8 @@ if ! python -m uvicorn --version >/dev/null 2>&1; then
   python -m playwright install chromium >/dev/null 2>&1 || true
 fi
 
-# clean any previous run (idempotent)
+# clean any previous run (idempotent — safe to run twice / alongside auto-start)
+pkill -f "uvicorn accounts_pilot" 2>/dev/null || true
 pkill -f "Xvfb $DISPLAY" 2>/dev/null || true
 pkill -f "x11vnc"        2>/dev/null || true
 pkill -f "websockify"    2>/dev/null || true

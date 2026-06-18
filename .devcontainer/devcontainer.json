@@ -6,13 +6,17 @@
   // signed into your own GitHub, can open them. No app password, nothing shared.
   "forwardPorts": [8000, 6080],
   "portsAttributes": {
-    "8000": { "label": "Accounts Pilot UI", "visibility": "private", "onAutoForward": "notify" },
-    "6080": { "label": "Watch browser (noVNC)", "visibility": "private", "onAutoForward": "silent" }
+    "8000": { "label": "Accounts Pilot UI", "visibility": "public", "onAutoForward": "notify" },
+    "6080": { "label": "Watch browser (noVNC)", "visibility": "public", "onAutoForward": "silent" }
   },
 
   // install deps into the SAME interpreter the start script runs (python -m). --ignore-installed
   // avoids pip choking on apt-managed packages (e.g. typing_extensions has no RECORD to uninstall).
   "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install --ignore-installed -r requirements.txt && python -m playwright install chromium",
+
+  // auto-start the app (detached) every time the Codespace starts — so you don't re-run
+  // the bash command after an idle-stop. Logs go to /tmp/accounts-pilot.log.
+  "postStartCommand": "nohup bash scripts/codespace-start.sh > /tmp/accounts-pilot.log 2>&1 & echo 'Accounts Pilot starting (logs: /tmp/accounts-pilot.log)'",
 
   "remoteEnv": {
     "DISPLAY": ":99",
