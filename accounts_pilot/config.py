@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     mis_folder: Path = Path("examples/booking_engine")   # offline fallback search corpus
     mis_timeout_s: float = 20.0
 
+    # optional shared login (for when the server is exposed publicly, e.g. a Public
+    # Codespaces port). When BOTH are set, every route requires HTTP Basic auth with
+    # these. Leave blank → no auth (local dev / GitHub-private port).
+    ap_auth_user: str = ""
+    ap_auth_pass: str = ""
+
     # storage
     db_path: Path = Path("data/accounts_pilot.db")
     artifacts_dir: Path = Path("data/artifacts")

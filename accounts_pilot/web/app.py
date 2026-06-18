@@ -31,6 +31,32 @@ store = JobStore()
 engine = BookingEngineSource()
 
 
+# ---- optional shared login (active only when AP_AUTH_USER + AP_AUTH_PASS are set) ----
+@app.middleware("http")
+async def _basic_auth(request, call_next):
+    """Gate every route behind HTTP Basic when a shared user/pass is configured — for
+    sharing a Public Codespaces port with non-GitHub users. No env set → no auth."""
+    import base64
+    import secrets as _secrets
+    from accounts_pilot.config import settings as _s
+    from starlette.responses import Response
+
+    user, pw = _s.ap_auth_user, _s.ap_auth_pass
+    if user and pw:
+        hdr = request.headers.get("authorization", "")
+        ok = False
+        if hdr.startswith("Basic "):
+            try:
+                u, _, p = base64.b64decode(hdr[6:]).decode("utf-8").partition(":")
+                ok = _secrets.compare_digest(u, user) and _secrets.compare_digest(p, pw)
+            except Exception:
+                ok = False
+        if not ok:
+            return Response("Authentication required", status_code=401,
+                            headers={"WWW-Authenticate": 'Basic realm="Accounts Pilot"'})
+    return await call_next(request)
+
+
 def _jid(property_id: str, ota: str) -> str:
     return f"{ota}__{property_id}"
 
