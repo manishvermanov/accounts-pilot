@@ -1788,45 +1788,156 @@ class LiveSession:
         rest, so this does NOT block it."""
         page = self.rt.page
         try:
-            dds = page.locator("[data-testid='room-type-dropdown']")
-            n = dds.count()
+            on_rooms = (page.locator("[data-testid='room-base-price']").count() > 0
+                        or "rooms & rates" in (page.inner_text("h1,h2") or "").lower())
         except Exception:
-            n = 0
-        if n == 0:
+            on_rooms = False
+        if not on_rooms:
             return False
+        rooms = profile_data.get("room_types", []) or []
         did = 0
-        # 1) rate management → 'Set rate manually' (hides the channel-manager requirement)
+
+        # 1) rate management → 'Set rate manually' (only if not already chosen)
         try:
-            man = page.locator("[data-element-name='set-rate-manually']").first
-            if man.count():
-                self._click_robust(man)
-                self._say("  · Agoda → Set rate manually")
-                did += 1; self.rt.think(0.3, 0.7)
+            for lab in page.locator("label").all():
+                if "set rate manually" in (lab.inner_text() or "").lower():
+                    rb = lab.locator("input[type='radio']").first
+                    already = rb.count() > 0 and rb.is_checked()
+                    if not already:
+                        self._click_robust(lab); did += 1; self.rt.think(0.3, 0.6)
+                        self._say("  · Agoda → Set rate manually")
+                    break
         except Exception:
             pass
-        # 2) each room's 'Room type' button-dropdown → match the JSON room name
-        rooms = profile_data.get("room_types", []) or []
-        for i in range(n):
-            try:
-                btn = dds.nth(i).locator("button").first
-                if btn.count() == 0:
+
+        # 2) Minimum room rate per room → the JSON base_rate (the page pre-fills a wrong value)
+        try:
+            rate_inputs = page.locator("[data-testid='room-base-price']")
+            for i in range(rate_inputs.count()):
+                r = rooms[i] if i < len(rooms) else (rooms[0] if rooms else {})
+                br = r.get("base_rate")
+                if not br:
                     continue
-                cur = (btn.inner_text() or "").strip()
-                if cur and cur.lower() != "room type":
-                    continue                          # already chosen
-                want = (rooms[i]["name"] if i < len(rooms)
-                        else (rooms[0]["name"] if rooms else "Standard"))
-                cands = [want]
-                if want and " " in want:
-                    cands.append(want.split()[0])     # 'Deluxe Valley-View' → 'Deluxe'
-                if self._open_and_pick(btn, cands):
-                    self._say(f"  · Agoda room {i + 1} type → {want}")
-                    did += 1; self.rt.think(0.4, 0.8)
-            except Exception:
-                pass
+                want = ("%g" % float(br))
+                el = rate_inputs.nth(i)
+                if (el.input_value() or "").strip() == want:
+                    continue                          # already correct
+                if self._set_react_input(el, want):
+                    did += 1; self._say(f"  · Agoda room {i + 1} min rate → {want}")
+        except Exception:
+            pass
+
+        # 3) Total-occupancy-limit + Bathrooms counters (the LLM can't tell the +/- apart)
+        did += self._fill_agoda_room_counters(rooms)
+
+        # 4) Breakfast Yes/No (required to advance) → from the profile
+        bf = ((profile_data.get("facilities", {}) or {}).get("breakfast", {}) or {})
+        did += 1 if self._fill_agoda_breakfast(bool(bf.get("available"))) else 0
+
         if did:
-            self._say(f"  ✓ Agoda rooms — rate-manual + {n} room-type dropdown(s) ({did})")
+            self._say(f"  ✓ Agoda rooms — occupancy/rate/bathrooms/breakfast set ({did})")
         return did > 0
+
+    def _fill_agoda_room_counters(self, rooms) -> int:
+        """Set each room's 'Total occupancy limit' (→ max occupancy) and 'Bathrooms' (→ ≥1).
+        The +/- buttons only carry aria-label 'increase'/'decrease', so we identify each
+        counter by the short field-label text next to it. Re-checks the current value and
+        only steps if it's wrong — never proceeds with the default 1."""
+        page = self.rt.page
+        tag_js = r"""() => {
+          const norm=s=>(s||'').replace(/\s+/g,' ').trim();
+          document.querySelectorAll('[data-ap-cnt],[data-ap-cval]').forEach(e=>{e.removeAttribute('data-ap-cnt');e.removeAttribute('data-ap-cval');});
+          const out=[]; let idx=0;
+          document.querySelectorAll('button[aria-label="decrease"]').forEach(dec=>{
+            let cont=dec.parentElement, inc=null;
+            for(let i=0;i<5 && cont;i++){ inc=cont.querySelector('button[aria-label="increase"]'); if(inc) break; cont=cont.parentElement; }
+            if(!inc||!cont) return;
+            let valEl=null,val=null;
+            cont.querySelectorAll('*').forEach(n=>{ if(valEl) return; if(n.children.length===0){ const t=norm(n.textContent); if(/^\d+$/.test(t)){ valEl=n; val=parseInt(t,10);} } });
+            let label='', probe=cont;
+            for(let i=0;i<5 && probe;i++){ const t=norm(probe.textContent);
+              if(t.length<45 && /total occupancy limit/i.test(t)){label='occupancy';break;}
+              if(t.length<45 && /bathroom/i.test(t)){label='bathrooms';break;} probe=probe.parentElement; }
+            dec.setAttribute('data-ap-cnt','dec-'+idx);
+            inc.setAttribute('data-ap-cnt','inc-'+idx);
+            if(valEl) valEl.setAttribute('data-ap-cval','val-'+idx);
+            out.push({idx, label, val}); idx++;
+          });
+          return out;
+        }"""
+        try:
+            counters = page.evaluate(tag_js) or []
+        except Exception:
+            return 0
+        occ = [c for c in counters if c["label"] == "occupancy"]
+        bath = [c for c in counters if c["label"] == "bathrooms"]
+        if not occ and counters:                      # labels didn't resolve → even=occ, odd=bath
+            occ = [c for i, c in enumerate(counters) if i % 2 == 0]
+            bath = [c for i, c in enumerate(counters) if i % 2 == 1]
+        did = 0
+        for ri, c in enumerate(occ):
+            r = rooms[ri] if ri < len(rooms) else (rooms[0] if rooms else {})
+            target = (r.get("max_occupancy")
+                      or ((r.get("max_adults") or 0) + (r.get("max_children") or 0))
+                      or r.get("base_occupancy") or 2)
+            if self._step_counter(c["idx"], c.get("val") or 0, int(target)):
+                did += 1; self._say(f"  · Agoda room {ri + 1} occupancy → {target}")
+        for c in bath:
+            if (c.get("val") or 0) < 1 and self._step_counter(c["idx"], c.get("val") or 0, 1):
+                did += 1; self._say("  · Agoda bathrooms → 1")
+        return did
+
+    def _step_counter(self, idx, current, target) -> bool:
+        """Click a tagged +/- counter from current→target (data-ap-cnt='inc-/dec-<idx>')."""
+        page = self.rt.page
+        delta = int(target) - int(current)
+        if delta == 0:
+            return False
+        sel = f'[data-ap-cnt="{"inc" if delta > 0 else "dec"}-{idx}"]'
+        try:
+            btn = page.locator(sel).first
+            if btn.count() == 0:
+                return False
+            for _ in range(abs(delta)):
+                if not btn.is_enabled():
+                    break
+                self._click_robust(btn); self.rt.think(0.12, 0.25)
+            return True
+        except Exception:
+            return False
+
+    def _fill_agoda_breakfast(self, available: bool) -> bool:
+        """Answer Agoda's 'Do you provide breakfast?' Yes/No (required to advance)."""
+        page = self.rt.page
+        want = "yes" if available else "no"
+        pick_js = r"""(want) => {
+          const norm=s=>(s||'').replace(/\s+/g,' ').trim();
+          document.querySelectorAll('[data-ap-bf]').forEach(e=>e.removeAttribute('data-ap-bf'));
+          // smallest block that asks the breakfast question AND holds the Yes/No labels
+          let scope=null, best=1e9;
+          document.querySelectorAll('div,section,fieldset').forEach(d=>{ const t=norm(d.textContent);
+            if(!/do you provide breakfast/i.test(t)) return;
+            const hasYN=[...d.querySelectorAll('label')].some(l=>{const lt=norm(l.textContent).toLowerCase(); return lt==='yes'||lt==='no';});
+            if(hasYN && t.length<best){ best=t.length; scope=d; } });
+          if(!scope) return false;
+          const lab=[...scope.querySelectorAll('label')].find(l=>norm(l.textContent).toLowerCase()===want);
+          // already chosen? a checked radio inside → skip
+          if(lab){ const rb=lab.querySelector('input[type=radio]'); if(rb && rb.checked) return 'done';
+                   lab.setAttribute('data-ap-bf','1'); return true; }
+          return false;
+        }"""
+        try:
+            res = page.evaluate(pick_js, want)
+            if res == "done":
+                return False
+            if res is True:
+                self._click_robust(page.locator('[data-ap-bf="1"]').first)
+                self.rt.think(0.2, 0.4)
+                self._say(f"  · Agoda breakfast → {want.title()}")
+                return True
+        except Exception:
+            pass
+        return False
 
     @staticmethod
     def _time_candidates(t: str) -> list:
