@@ -849,6 +849,58 @@ class LiveSession:
             pass
         return False
 
+    def _resolve_photo_paths(self, photos) -> list[str]:
+        """Turn the profile's photos into LOCAL file paths Playwright can upload.
+
+        Each Photo carries a local `path` and/or a remote `url`. The MIS only ever stores
+        S3 URLs (there is never a file in a local folder on the host), so a `url` that
+        isn't downloaded means an EMPTY upload queue — and photo-gated OTA steps (Agoda's
+        'Add at least 3 photos to continue') never advance. So: use a real local file if
+        present, otherwise download the URL once into a temp cache (keyed by URL hash, so
+        re-runs don't re-fetch) and return that path."""
+        import hashlib
+        import tempfile
+        import urllib.parse
+        import urllib.request
+
+        out: list[str] = []
+        cache_dir = os.path.join(tempfile.gettempdir(), "accounts_pilot_photos")
+        os.makedirs(cache_dir, exist_ok=True)
+        downloaded = 0
+        for ph in (photos or []):
+            path = getattr(ph, "path", None)
+            url = getattr(ph, "url", None)
+            # 1) a real local file always wins
+            if path and os.path.exists(path):
+                out.append(path)
+                continue
+            # 2) otherwise pull the remote url (S3 / CDN) once, cached by url hash
+            if not url:
+                continue
+            ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lower()
+            if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+                ext = ".jpg"
+            dest = os.path.join(cache_dir, hashlib.sha1(url.encode("utf-8")).hexdigest() + ext)
+            if os.path.exists(dest) and os.path.getsize(dest) > 0:
+                out.append(dest)
+                continue
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (AccountsPilot)"})
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = r.read()
+                if not data:
+                    raise ValueError("empty body")
+                with open(dest, "wb") as f:
+                    f.write(data)
+                out.append(dest)
+                downloaded += 1
+            except Exception as e:
+                short = (url[:60] + "…") if len(url) > 60 else url
+                self._say(f"  ⚠ photo: couldn't download {short} ({type(e).__name__}) — skipped")
+        if downloaded:
+            self._say(f"  ✓ photos — downloaded {downloaded} remote image(s) to a temp cache for upload")
+        return out
+
     def _photo_preflight(self) -> None:
         """Warn (in the live log) about photos the OTAs will reject — BEFORE we try to
         upload — so the operator fixes the JSON instead of debugging an OTA toast.
@@ -3666,7 +3718,9 @@ class LiveSession:
             self._unit_order = []                          # distinct unit_ids seen (ordered)
             self._unit_target = len(self._room_list)
             self._mmt_room_idx = 0                          # which room MMT is currently creating
-            self._photo_paths = [ph.path for ph in (getattr(p, "photos", []) or []) if getattr(ph, "path", None)]
+            # photos come from the MIS as S3 URLs (no local files) — download them to a
+            # temp cache so the upload queue is real; without this, photo-gated steps stall.
+            self._photo_paths = self._resolve_photo_paths(getattr(p, "photos", []) or [])
             self._all_photo_paths = [pp for pp in self._photo_paths if os.path.exists(pp)]
             self._photo_preflight()                    # warn early about photos OTAs will reject
             self._ensure_filechooser()                 # auto-feed any upload dialog (no OS popup)
