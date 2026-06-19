@@ -92,6 +92,40 @@ def test_all_ota_fields_materialize():
         assert k in prof["room_types"][0]
 
 
+def test_override_persists_and_merges_on_load(tmp_path, monkeypatch):
+    """Operator edits saved to the local DB must reload (and win) next time the hotel
+    is opened — since the MIS is read-only and can't store them."""
+    from accounts_pilot.config import settings as s
+    monkeypatch.setattr(s, "db_path", tmp_path / "ov.db")
+    # folder provider over a real profile
+    monkeypatch.setattr(s, "mis_metabase_url", "")
+    monkeypatch.setattr(s, "mis_metabase_db_id", 0)
+    monkeypatch.setattr(s, "mis_pg_dsn", "")
+    monkeypatch.setattr(s, "mis_base_url", "")
+    monkeypatch.setattr(s, "mis_folder", "examples/booking_engine")
+    from accounts_pilot.mis.overrides import save_override, get_override, delete_override
+    from accounts_pilot.web.app import mis_hotel, mis_save, ProfileReq
+
+    pid = "b9635fe2-6b18-4806-a7e0-dfa55792b5c3"   # Hotel Manchester Royals LLP (folder)
+    delete_override(pid)
+    base = mis_hotel(pid)
+    assert base["from_override"] is False
+    orig_name = base["summary"]["name"]
+
+    edited = json.loads(json.dumps(base["profile"]))
+    edited["display_name"] = "EDITED — operator override"
+    edited["star_rating"] = 5
+    mis_save(ProfileReq(profile=edited))
+    assert get_override(pid) is not None
+
+    reloaded = mis_hotel(pid)
+    assert reloaded["from_override"] is True
+    assert reloaded["summary"]["name"] == "EDITED — operator override"   # edit won
+    assert reloaded["profile"]["star_rating"] == 5
+    assert orig_name != "EDITED — operator override"
+    delete_override(pid)
+
+
 def test_summary_shape():
     s = summarize(normalize_to_profile(RAW))
     assert s["name"] == "HOTEL TEST PALACE"

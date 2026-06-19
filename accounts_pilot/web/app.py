@@ -293,10 +293,12 @@ def mis_normalize(req: ProfileReq):
 
 @app.get("/api/mis/hotel/{hotel_id}")
 def mis_hotel(hotel_id: str):
-    """Fetch one hotel from MIS and convert it to a validated PropertyProfile.
-    Returns a compact summary + the full profile (the UI keeps the profile hidden
-    behind a 'View JSON' toggle and feeds it to the OTA fill)."""
-    from accounts_pilot.mis import get_provider
+    """Fetch one hotel from MIS and convert it to a PropertyProfile. If the operator
+    has saved edits for this hotel (MIS is read-only — edits live in the local DB),
+    merge them back on top (their edits win), so prior changes reload automatically."""
+    from accounts_pilot.mis import get_provider, summarize
+    from accounts_pilot.mis.convert import _deep_merge
+    from accounts_pilot.mis.overrides import get_override
     p = get_provider()
     try:
         loaded = p.load_profile(hotel_id)
@@ -304,7 +306,40 @@ def mis_hotel(hotel_id: str):
         raise HTTPException(404, str(e))
     except Exception as e:
         raise HTTPException(502, f"MIS convert failed: {type(e).__name__}: {e}")
-    return loaded     # {"profile": {...}, "summary": {...}}
+
+    override = get_override(hotel_id)
+    if override:
+        merged = _deep_merge(loaded["profile"], override)   # operator's saved edits win
+        valid, missing = _validity(merged)
+        loaded.update(profile=merged, summary=summarize(merged),
+                      valid=valid, missing=missing, from_override=True)
+    else:
+        loaded["from_override"] = False
+    return loaded     # {"profile", "summary", "valid", "missing", "from_override"}
+
+
+@app.post("/api/mis/save")
+def mis_save(req: ProfileReq):
+    """Persist the operator's edited profile to the local DB (keyed by property_id),
+    so it survives restarts and reloads next time the hotel is opened. Saves even if a
+    few required fields are still blank (progress isn't lost); reports valid/missing."""
+    from accounts_pilot.mis import summarize
+    from accounts_pilot.mis.overrides import save_override
+    pid = req.profile.get("property_id")
+    if not pid:
+        return {"ok": False, "error": "profile has no property_id — cannot save"}
+    save_override(pid, req.profile)
+    valid, missing = _validity(req.profile)
+    return {"ok": True, "saved": True, "summary": summarize(req.profile),
+            "valid": valid, "missing": missing}
+
+
+@app.delete("/api/mis/override/{hotel_id}")
+def mis_clear_override(hotel_id: str):
+    """Forget the saved edits for this hotel — next open re-pulls fresh from the MIS."""
+    from accounts_pilot.mis.overrides import delete_override
+    delete_override(hotel_id)
+    return {"ok": True}
 
 
 @app.post("/api/record-page")

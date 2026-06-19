@@ -384,7 +384,7 @@
       <span class="sp"></span>
       <button class="btn-ghost btn-sm" onclick="loadSimDemo(this)" title="Load the demo property JSON">Load demo</button>
       <button class="btn-ghost btn-sm" onclick="runSim(this)" title="Optional: dry-run the offline handlers against this JSON">▶ Test fill</button>
-      <button class="btn-ok btn-sm" onclick="closeSim()" title="Done — this is your active property; click an OTA to Connect &amp; Fill">✓ Done — pick an OTA</button>
+      <button class="btn-ok btn-sm" onclick="doneSim(this)" title="Set this JSON as your active property, then pick an OTA to Connect &amp; Fill">✓ Done — use this property</button>
     </div>
   </div>
 </div>
@@ -431,9 +431,9 @@ const STATE={
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
 // the picked hotel's converted profile lives here; the OTA Fill buttons use it
-let SELECTED=null, SELECTED_MISSING=[];
+let SELECTED=null, SELECTED_MISSING=[], SELECTED_FROM_OVERRIDE=false;
 function getProfile(){
-  if(!SELECTED){ alert('Search for a hotel and pick one first.'); return null; }
+  if(!SELECTED){ alert('No active property yet — either pick a hotel from search, or click the ▶ button to paste your own property JSON (it becomes your active property automatically).'); return null; }
   return JSON.parse(JSON.stringify(SELECTED));   // a copy, so autopilot flag never sticks
 }
 function inits(name){ const p=(name||'?').trim().replace(/^(hotel|the)\s+/i,'').split(/\s+/); return ((p[0]||'?')[0]||'?').toUpperCase(); }
@@ -465,7 +465,17 @@ async function pickHotel(id,el){
   sel.innerHTML='<div class="selected" style="padding:14px;font-size:12.5px;color:var(--muted)">Preparing data…</div>';
   let d; try{ d=await api('/api/mis/hotel/'+encodeURIComponent(id)); }
   catch(e){ sel.innerHTML='<div class="selected" style="padding:14px;color:var(--err);font-size:12.5px">Couldn’t prepare this hotel: '+esc(e.message)+'</div>'; SELECTED=null; return; }
-  SELECTED=d.profile; SELECTED_MISSING=d.missing||[];
+  SELECTED=d.profile; SELECTED_MISSING=d.missing||[]; SELECTED_FROM_OVERRIDE=!!d.from_override;
+  renderSelected(d.summary, d.profile);
+}
+
+async function resetToMis(){
+  if(!SELECTED || !SELECTED.property_id) return;
+  if(!confirm('Discard your saved edits for this hotel and re-pull fresh from the MIS?')) return;
+  const id=SELECTED.property_id;
+  try{ await api('/api/mis/override/'+encodeURIComponent(id),{method:'DELETE'}); }catch(e){}
+  const d=await api('/api/mis/hotel/'+encodeURIComponent(id));
+  SELECTED=d.profile; SELECTED_MISSING=d.missing||[]; SELECTED_FROM_OVERRIDE=!!d.from_override;
   renderSelected(d.summary, d.profile);
 }
 
@@ -500,6 +510,11 @@ function renderSelected(s, profile){
         <div class="sc-stat"><b>${s.amenities||0}</b><span>Amenities</span></div>
       </div>
       ${warn}
+      ${SELECTED_FROM_OVERRIDE ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:#eef7ff;border-top:1px solid #d9e9fb;font-size:11.5px;color:#1d4e89">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#1d4e89" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <b>Your saved edits are loaded</b> (stored locally, not in the MIS).
+        <button class="btn-ghost btn-sm" style="margin-left:auto" onclick="resetToMis()">Reset to MIS</button>
+      </div>` : ''}
       <div class="sc-rooms">${rooms}</div>
       <div style="padding:11px 14px;border-top:1px solid var(--line2)">
         <button class="btn" style="width:100%;justify-content:center" onclick="openJson()">
@@ -509,7 +524,7 @@ function renderSelected(s, profile){
       </div>
     </div>`;
 }
-function clearSelected(){ SELECTED=null; SELECTED_MISSING=[]; document.getElementById('selected').innerHTML='';
+function clearSelected(){ SELECTED=null; SELECTED_MISSING=[]; SELECTED_FROM_OVERRIDE=false; document.getElementById('selected').innerHTML='';
   document.querySelectorAll('.result').forEach(r=>r.classList.remove('active')); }
 
 // ---- property viewer / editor (table for non-tech users, JSON for power users) ----
@@ -677,12 +692,14 @@ async function saveJson(btn){
   }
   const o=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
   try{
-    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:WORKING})});
-    if(!r.ok){ setJsonStatus('Some values are invalid — not saved:\n'+r.error,'bad'); return; }
+    const r=await api('/api/mis/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:WORKING})});
+    if(!r.ok){ setJsonStatus('Could not save: '+esc(r.error||'unknown'),'bad'); return; }
     SELECTED=clone(WORKING);              // edits now drive the OTA fill
-    SELECTED_MISSING=[];                  // a valid save means nothing required is missing
+    SELECTED_MISSING=r.missing||[];
+    SELECTED_FROM_OVERRIDE=true;          // it's now a saved override
     renderSelected(r.summary, SELECTED);  // refresh the card (rooms/photos/rate pills)
-    setJsonStatus('✓ Saved — these details will be used for every channel.','ok');
+    if(r.valid) setJsonStatus('✓ Saved — stored locally; reloads automatically next time you open this hotel.','ok');
+    else setJsonStatus('✓ Saved (stored locally). '+(r.missing||[]).length+' field(s) still need filling before an OTA fill.','ok');
   }catch(e){ setJsonStatus('Save failed: '+e.message,'bad'); }
   finally{ btn.disabled=false; btn.textContent=o; }
 }
@@ -885,24 +902,50 @@ async function runSim(btn){
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile})});
     out.innerHTML=renderSim(r);
     const nchan=Object.keys(r.otas||{}).length;
-    st.innerHTML=r.ok?('<span class="ok">✓ validated</span> · '+(r.filled_total||0)+' field(s) filled across '+nchan+' channel(s) with offline handlers')
-                     :'<span style="color:var(--err)">✗ JSON failed validation</span>';
+    if(r.ok){
+      // a validated JSON IS your hotel — make it active now so Fill never asks you to pick one
+      await activateProperty(profile);
+      st.innerHTML='<span class="ok">✓ validated &amp; set as your active property</span> · '+(r.filled_total||0)+' field(s) filled across '+nchan+' channel(s). Close, Connect to an OTA, then Fill.';
+    } else {
+      st.innerHTML='<span style="color:var(--err)">✗ JSON failed validation</span>';
+    }
   }catch(e){ out.innerHTML='<pre>'+esc(String(e.message||e))+'</pre>'; st.textContent=''; }
   finally{ btn.disabled=false; btn.textContent=o; }
+}
+// Make a pasted/edited JSON THE active property (so Fill never asks you to pick a hotel).
+// Validates first; on success sets SELECTED + renders the sidebar card. Returns true on ok.
+async function activateProperty(p){
+  const st=document.getElementById('simStatus');
+  try{
+    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
+    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Won’t set as your property — fix validation first: '+esc((r.error||'').split('\n')[0])+'</span>'; return false; }
+    SELECTED=clone(p); SELECTED_MISSING=[];
+    try{ renderSelected(r.summary, SELECTED); }catch(e){}
+    return true;
+  }catch(e){ st.innerHTML='<span style="color:var(--err)">'+esc(String(e.message||e))+'</span>'; return false; }
+}
+// Primary CTA: set the current JSON (raw or table) as the active property, then close.
+async function doneSim(btn){
+  const p=simReadProfile(); if(!p) return;            // shows a clear error if missing/invalid
+  const o=btn.textContent; btn.disabled=true; btn.textContent='Setting…';
+  try{
+    if(await activateProperty(p)){
+      btn.textContent='✓ Set';
+      closeSim();
+    }
+  } finally { btn.disabled=false; setTimeout(()=>btn.textContent=o,300); }
 }
 async function useForFill(btn){
   const p=simReadProfile(); if(!p) return;
   const st=document.getElementById('simStatus');
   const o=btn.textContent; btn.disabled=true; btn.textContent='Loading…';
   try{
-    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
-    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Won’t load — fix validation first: '+esc((r.error||'').split('\n')[0])+'</span>'; return; }
-    SELECTED=clone(p); SELECTED_MISSING=[];
-    try{ renderSelected(r.summary, SELECTED); }catch(e){}
-    btn.textContent='✓ Active property set';
-    st.innerHTML='<span class="ok">✓ Loaded as the active property — close this, Connect to the OTA, then press Fill.</span>';
-    setTimeout(()=>{ closeSim(); },1100);
-  }catch(e){ st.innerHTML='<span style="color:var(--err)">'+esc(String(e.message||e))+'</span>'; }
+    if(await activateProperty(p)){
+      btn.textContent='✓ Active property set';
+      st.innerHTML='<span class="ok">✓ This is now your active property — close this, Connect to the OTA, then press Fill.</span>';
+      setTimeout(()=>{ closeSim(); },1100);
+    }
+  }
   finally{ btn.disabled=false; setTimeout(()=>btn.textContent=o,1400); }
 }
 function renderSim(r){
