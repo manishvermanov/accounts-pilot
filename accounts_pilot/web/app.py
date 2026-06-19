@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -32,28 +32,62 @@ engine = BookingEngineSource()
 
 
 # ---- optional shared login (active only when AP_AUTH_USER + AP_AUTH_PASS are set) ----
-@app.middleware("http")
-async def _basic_auth(request, call_next):
-    """Gate every route behind HTTP Basic when a shared user/pass is configured — for
-    sharing a Public Codespaces port with non-GitHub users. No env set → no auth."""
-    import base64
-    import secrets as _secrets
-    from accounts_pilot.config import settings as _s
-    from starlette.responses import Response
+# Cookie-based (NOT HTTP Basic): the github.dev / app.github.dev proxy drops the
+# Authorization header, so Basic-auth loops forever there. A login form + signed cookie
+# passes through cleanly. No env set → no auth (local dev / GitHub-private port).
+import hashlib as _hashlib
 
-    user, pw = _s.ap_auth_user, _s.ap_auth_pass
-    if user and pw:
-        hdr = request.headers.get("authorization", "")
-        ok = False
-        if hdr.startswith("Basic "):
-            try:
-                u, _, p = base64.b64decode(hdr[6:]).decode("utf-8").partition(":")
-                ok = _secrets.compare_digest(u, user) and _secrets.compare_digest(p, pw)
-            except Exception:
-                ok = False
-        if not ok:
-            return Response("Authentication required", status_code=401,
-                            headers={"WWW-Authenticate": 'Basic realm="Accounts Pilot"'})
+
+def _auth_token() -> str:
+    from accounts_pilot.config import settings as _s
+    return _hashlib.sha256(f"{_s.ap_auth_user}:{_s.ap_auth_pass}".encode()).hexdigest()
+
+
+_LOGIN_PAGE = """<!doctype html><html><head><meta charset=utf-8><title>Sign in — Accounts Pilot</title>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<style>body{font-family:Inter,system-ui,Segoe UI,sans-serif;background:#0f1729;color:#e7ecf4;display:grid;place-items:center;height:100vh;margin:0}
+.box{background:#1a2235;border:1px solid #2a3550;border-radius:16px;padding:28px 26px;width:300px;box-shadow:0 24px 64px -24px #000}
+h1{font-size:19px;margin:0 0 3px}p{color:#94a1b6;font-size:12.5px;margin:0 0 16px}
+input{width:100%;box-sizing:border-box;margin:6px 0;padding:11px 12px;border-radius:9px;border:1px solid #2a3550;background:#0f1729;color:#fff;font-size:14px;outline:none}
+input:focus{border-color:#4f46e5}
+button{width:100%;margin-top:12px;padding:11px;border:0;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c5cff);color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+.err{color:#ff7a7a;font-size:12px;margin-top:10px;min-height:14px}</style></head>
+<body><form class=box method=post action="/login">
+<h1>Accounts&nbsp;Pilot</h1><p>Sign in to continue</p>
+<input name=username placeholder=Username autofocus autocomplete=username>
+<input name=password type=password placeholder=Password autocomplete=current-password>
+<button>Sign in</button><div class=err>%ERR%</div></form></body></html>"""
+
+
+@app.get("/login")
+def login_page():
+    return HTMLResponse(_LOGIN_PAGE.replace("%ERR%", ""))
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    import secrets as _secrets
+    from urllib.parse import parse_qs
+    from accounts_pilot.config import settings as _s
+    data = parse_qs((await request.body()).decode("utf-8", "ignore"))
+    user = (data.get("username") or [""])[0]
+    pw = (data.get("password") or [""])[0]
+    if (_s.ap_auth_user and _secrets.compare_digest(user, _s.ap_auth_user)
+            and _secrets.compare_digest(pw, _s.ap_auth_pass)):
+        resp = RedirectResponse("/", status_code=303)
+        resp.set_cookie("ap_session", _auth_token(), httponly=True, secure=True,
+                        samesite="lax", max_age=60 * 60 * 24 * 30)
+        return resp
+    return HTMLResponse(_LOGIN_PAGE.replace("%ERR%", "Wrong username or password"), status_code=401)
+
+
+@app.middleware("http")
+async def _cookie_auth(request, call_next):
+    """Require the session cookie when a shared login is configured. /login is open."""
+    from accounts_pilot.config import settings as _s
+    if _s.ap_auth_user and _s.ap_auth_pass and request.url.path != "/login":
+        if request.cookies.get("ap_session") != _auth_token():
+            return RedirectResponse("/login", status_code=303)
     return await call_next(request)
 
 
