@@ -700,6 +700,7 @@ async function saveJson(btn){
     renderSelected(r.summary, SELECTED);  // refresh the card (rooms/photos/rate pills)
     if(r.valid) setJsonStatus('✓ Saved — stored locally; reloads automatically next time you open this hotel.','ok');
     else setJsonStatus('✓ Saved (stored locally). '+(r.missing||[]).length+' field(s) still need filling before an OTA fill.','ok');
+    setTimeout(closeJson, 650);           // close the editor on a successful save
   }catch(e){ setJsonStatus('Save failed: '+e.message,'bad'); }
   finally{ btn.disabled=false; btn.textContent=o; }
 }
