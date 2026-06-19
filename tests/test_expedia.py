@@ -57,6 +57,106 @@ def test_location_gates_on_address_input_even_without_marker_text():
 
 
 # --------------------------------------------------------------------------- #
+# landing wizard: 'What would you like to list?' classification cards
+# --------------------------------------------------------------------------- #
+def test_classification_clicks_lodging_for_hotel():
+    lod = FakeLocator(count=1, tag="div")
+    locs = {"#classification_lodging, #classification_privateResidence,"
+            "#list-your-property-form": FakeLocator(count=1),
+            "#classification_lodging": lod}
+    page = FakePage([{"url": "http://x/en_US/list", "heading": "List",
+                      "body": "what would you like to list?"}], locators=locs)
+    s = _expedia(page)
+    assert s._fill_expedia_classification({"property_type": "hotel"}) is True
+    assert lod.clicked                                 # the Lodging card was clicked
+
+
+def test_classification_picks_residence_for_villa():
+    res = FakeLocator(count=1, tag="div")
+    locs = {"#classification_lodging, #classification_privateResidence,"
+            "#list-your-property-form": FakeLocator(count=1),
+            "#classification_privateResidence": res}
+    page = FakePage([{"url": "http://x/en_US/list", "heading": "List", "body": "list"}], locators=locs)
+    s = _expedia(page)
+    assert s._fill_expedia_classification({"property_type": "villa"}) is True
+    assert res.clicked
+
+
+def test_classification_defers_when_absent():
+    page = FakePage([{"url": "http://x/other", "heading": "h", "body": "unrelated"}])
+    s = _expedia(page)
+    assert s._fill_expedia_classification({"property_type": "hotel"}) is False
+
+
+# --------------------------------------------------------------------------- #
+# manual address step: country FIRST, then fields
+# --------------------------------------------------------------------------- #
+def _manual_addr_profile():
+    return {"property_type": "hotel", "address": {
+        "line1": "Mall Road", "line2": "Near Manu Market", "city": "Manali",
+        "state": "Himachal Pradesh", "country": "IN", "postal_code": "175131"}}
+
+
+def test_manual_location_sets_country_first_and_fields():
+    country = FakeLocator(count=1, tag="select", value="")
+    a1 = FakeLocator(count=1, tag="input", value="")
+    city = FakeLocator(count=1, tag="input", value="")
+    zip_ = FakeLocator(count=1, tag="input", value="")
+    locs = {"#country, #address1, #manualAddressNextBtn": FakeLocator(count=1),
+            "#country": country, "#address1": a1,
+            "#address2": FakeLocator(count=1, tag="input", value=""),
+            "#city": city, "#stateProvince": FakeLocator(count=1, tag="select", value=""),
+            "#postalCode": zip_}
+    page = FakePage([{"url": "http://x/list/manual-location", "heading": "addr",
+                      "body": "property address"}], locators=locs)
+    s = _expedia(page)
+    # text fields fill via _set_react_input (country/state go through _set_react_select, a JS
+    # path verified against a real browser, not the FakePage).
+    assert s._fill_expedia_manual_location(_manual_addr_profile()) is True
+    assert a1.filled == "Mall Road" and city.filled == "Manali"
+    assert zip_.filled == "175131"
+
+
+def test_manual_location_defers_when_absent():
+    page = FakePage([{"url": "http://x/other", "heading": "h", "body": "unrelated"}])
+    s = _expedia(page)
+    assert s._fill_expedia_manual_location(_manual_addr_profile()) is False
+
+
+# --------------------------------------------------------------------------- #
+# step-1 location typeahead (#locationTypeAhead)
+# --------------------------------------------------------------------------- #
+def test_typeahead_types_address_query():
+    box = FakeLocator(count=1, tag="input", value="")
+    page = FakePage([{"url": "http://x/list/location", "heading": "loc",
+                      "body": "where is your property located"}],
+                    locators={"#locationTypeAhead": box})
+    s = _expedia(page)
+    prof = {"display_name": "Maple Ridge Inn",
+            "address": {"line1": "Mall Road", "city": "Manali",
+                        "state": "Himachal Pradesh", "country": "IN"}}
+    assert s._fill_expedia_typeahead(prof) is True
+    typed = " ".join(page.keyboard.typed)
+    assert "Mall Road" in typed and "Manali" in typed and "India" in typed
+
+
+def test_typeahead_defers_when_absent():
+    page = FakePage([{"url": "http://x/other", "heading": "h", "body": "unrelated"}])
+    s = _expedia(page)
+    assert s._fill_expedia_typeahead({"address": {"line1": "A"}}) is False
+
+
+# --------------------------------------------------------------------------- #
+# policies & settings (payment / time zone / currency / clear invalid taxes)
+# --------------------------------------------------------------------------- #
+def test_policies_defers_when_absent():
+    # not the policies URL and no #timeZoneId/billingCurrency present → defer to the LLM
+    page = FakePage([{"url": "http://x/other", "heading": "h", "body": "unrelated"}])
+    s = _expedia(page)
+    assert s._fill_expedia_policies({"address": {"country": "IN"}}) is False
+
+
+# --------------------------------------------------------------------------- #
 # positive: check-in / check-out time pickers (native <select>)
 # --------------------------------------------------------------------------- #
 def test_times_picks_both_native_selects():

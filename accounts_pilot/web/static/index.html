@@ -232,7 +232,11 @@
   .fsh{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#eef1fb,#e9edf8);color:var(--brand-ink);
     font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:9px 16px;border-bottom:1px solid var(--line2)}
   .fgroup{border-left:3px solid #eceffa;margin:0 0 0 12px}
-  .fgroup-t{font-size:11.5px;font-weight:800;color:var(--ink);padding:9px 14px 7px;background:#fafbfe;border-bottom:1px solid var(--line2)}
+  .fgroup-t{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;color:var(--ink);padding:9px 14px 7px;background:#fafbfe;border-bottom:1px solid var(--line2)}
+  .fdel{margin-left:auto;flex:none;border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:13px;line-height:1;padding:3px 6px;border-radius:6px}
+  .fdel:hover{color:var(--err);background:var(--errbg)}
+  .fadd{padding:8px 16px 12px}
+  .fadd button{border-style:dashed}
   .frow{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:center;padding:7px 16px;border-bottom:1px solid #f1f4f9}
   .frow:hover{background:#fafbfe}
   .frow .fk{font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px;line-height:1.3}
@@ -546,7 +550,12 @@ const HIDE_FIELDS=new Set([
   'opening_date','is_currently_open',
 ]);
 function humanize(k){ return k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
-function singular(k){ return humanize(k).replace(/ies$/,'y').replace(/s$/,''); }
+function singular(k){
+  const h=humanize(k);
+  if(/ies$/.test(h)) return h.replace(/ies$/,'y');          // Amenities → Amenity
+  if(/(x|s|z|ch|sh)es$/i.test(h)) return h.replace(/es$/,''); // Taxes → Tax, Buses → Bus
+  return h.replace(/s$/,'');                                 // Rate Plans → Rate Plan
+}
 const escA=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
 // fields with a known, fixed set of values → render as a dropdown (prevents typos / invalid values).
@@ -566,8 +575,12 @@ const ENUM={
   view:['sea','city','garden','pool','mountain'],
   coverage:['none','rooms','public_areas','all_areas'],
   currency:['INR','USD','EUR','GBP','AED','SGD','AUD'],
+  billing_currency:['INR','USD','EUR','GBP','AED','SGD','AUD'],
   country:['IN','US','GB','AE','SG','AU','NP','LK'],
   state:IN_STATES,
+  cancellation_fee_type:['first_night','fifty_percent','full_stay'],
+  basis:['percent_per_stay','amount_per_stay','amount_per_night'],
+  timezone:['Asia/Kolkata','Asia/Dubai','Asia/Kathmandu','Asia/Colombo','UTC'],
 };
 const ENUM_LABELS={IN:'India (IN)',US:'United States (US)',GB:'United Kingdom (GB)',AE:'UAE (AE)',SG:'Singapore (SG)',AU:'Australia (AU)',NP:'Nepal (NP)',LK:'Sri Lanka (LK)'};
 function enumFor(path,key){
@@ -604,6 +617,37 @@ function fieldRow(path,key,val){
   return `<div class="frow ${miss?'miss':''}"><div class="fk">${human}${miss?' <span class="notset">not set</span>':''}</div><div class="fv">${input}</div></div>`;
 }
 
+// arrays the operator can grow with a "+ Add" button (objects, not text lists).
+// Even when empty (e.g. taxes []), render as an add-able group, not a textarea.
+const OBJ_ARRAYS=new Set(['rate_plans','beds','taxes','room_types']);
+// blank starter items for the addable arrays (so the MIS giving only 1 isn't a dead end)
+const ARRAY_TEMPLATES={
+  rate_plans:{code:'',name:'',price:null},
+  beds:{bed_type:'double',count:1},
+  taxes:{name:'',basis:'percent_per_stay',rate:null},
+  room_types:{name:'New Room',count:1,max_adults:2,max_children:0,base_occupancy:2,base_child_occupancy:0,max_occupancy:2,
+    beds:[{bed_type:'double',count:1}],bathroom:'private',size_sqm:null,view:null,description:null,base_rate:null,currency:'INR',
+    extra_adult_charge:null,extra_child_charge:null,smoking:false,extra_bed_available:false,room_amenities:[],rate_plans:[]},
+};
+function getPath(o,path){ let c=o; for(const k of path.split('.')){ if(c==null) return undefined; c=c[k]; } return c; }
+function newArrayItem(key,arr){
+  if(ARRAY_TEMPLATES[key]) return clone(ARRAY_TEMPLATES[key]);
+  if(arr && arr.length) return clone(arr[arr.length-1]);   // unknown array → clone last as a starting point
+  return {};
+}
+function addArrayItem(btn){
+  const host=btn.closest('[data-table-host]'); const path=btn.dataset.arrayPath; const key=path.split('.').pop();
+  const arr=getPath(host._working,path);
+  if(!Array.isArray(arr)) return;
+  arr.push(newArrayItem(key,arr));
+  mountTable(host,host._working);
+}
+function removeArrayItem(btn){
+  const host=btn.closest('[data-table-host]'); const ks=btn.dataset.itemPath.split('.');
+  const idx=parseInt(ks.pop(),10); const arr=getPath(host._working,ks.join('.'));
+  if(Array.isArray(arr) && idx>=0 && idx<arr.length){ arr.splice(idx,1); mountTable(host,host._working); }
+}
+
 function renderNode(obj,prefix){
   let html='';
   for(const k in obj){
@@ -611,9 +655,14 @@ function renderNode(obj,prefix){
     if(HIDE_FIELDS.has(k)) continue;            // kept in JSON, hidden from the Table
     if(k==='photos'){ html+=`<div class="frow"><div class="fk">Photos</div><div class="fv"><span class="ro">${(v||[]).length} photos (from MIS — managed automatically)</span></div></div>`; continue; }
     if(Array.isArray(v)){
-      if(v.length && typeof v[0]==='object'){
+      const isObjArr=(v.length && typeof v[0]==='object') || OBJ_ARRAYS.has(k);
+      if(isObjArr){
         html+=`<div class="fsh">${humanize(k)}</div>`;
-        v.forEach((el,i)=>{ html+=`<div class="fgroup"><div class="fgroup-t">${singular(k)} ${i+1}${el && el.name?' — '+escA(el.name):''}</div>${renderNode(el,path+'.'+i)}</div>`; });
+        v.forEach((el,i)=>{ html+=`<div class="fgroup"><div class="fgroup-t">${singular(k)} ${i+1}${el && el.name?' — '+escA(el.name):''}`
+          +`<button class="fdel" title="Remove" data-item-path="${path+'.'+i}" onclick="removeArrayItem(this)">✕</button></div>`
+          +`${renderNode(el,path+'.'+i)}</div>`; });
+        if(!v.length) html+=`<div class="frow"><div class="fk" style="color:var(--faint)">none yet</div><div class="fv"></div></div>`;
+        html+=`<div class="fadd"><button class="btn-ghost btn-sm" data-array-path="${path}" onclick="addArrayItem(this)">+ Add ${singular(k)}</button></div>`;
       } else {
         const miss=!v||!v.length;
         html+=`<div class="frow ${miss?'miss':''}"><div class="fk">${humanize(k)}${miss?' <span class="notset">empty</span>':''}</div><div class="fv"><textarea data-path="${path}" data-kind="list" rows="${Math.min(10,Math.max(2,(v||[]).length))}" oninput="patchField(this)" placeholder="one per line">${escA((v||[]).join('\n'))}</textarea></div></div>`;
@@ -914,13 +963,17 @@ async function runSim(btn){
   finally{ btn.disabled=false; btn.textContent=o; }
 }
 // Make a pasted/edited JSON THE active property (so Fill never asks you to pick a hotel).
-// Validates first; on success sets SELECTED + renders the sidebar card. Returns true on ok.
+// NORMALIZES first so the active property always carries the FULL schema structure — every
+// field present, null where empty — and the operator can change any of them. Lenient: an
+// incomplete JSON still becomes active (missing fields surface on the card to fill later).
 async function activateProperty(p){
   const st=document.getElementById('simStatus');
   try{
-    const r=await api('/api/mis/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
-    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Won’t set as your property — fix validation first: '+esc((r.error||'').split('\n')[0])+'</span>'; return false; }
-    SELECTED=clone(p); SELECTED_MISSING=[];
+    const r=await api('/api/mis/normalize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
+    if(!r.ok){ st.innerHTML='<span style="color:var(--err)">Couldn’t read that JSON: '+esc((r.error||'').split('\n')[0])+'</span>'; return false; }
+    SELECTED=r.profile;            // full structure (all OTA fields materialized, null if unset)
+    SELECTED_MISSING=r.missing||[];
+    SIM_WORKING=r.profile;
     try{ renderSelected(r.summary, SELECTED); }catch(e){}
     return true;
   }catch(e){ st.innerHTML='<span style="color:var(--err)">'+esc(String(e.message||e))+'</span>'; return false; }

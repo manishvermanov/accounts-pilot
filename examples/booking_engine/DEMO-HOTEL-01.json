@@ -6,8 +6,14 @@
   "star_rating": 3,
   "location_type": "mountain",
   "description": "A cosy mountain-view hotel surrounded by pine forest and quiet hills. Guests enjoy fresh air, valley views, and a calm retreat away from the city. Ideal for couples and families looking for a peaceful getaway.",
-  "currency": "INR",
-  "is_currently_open": true,
+  "property_email": null,
+  "property_phone": null,
+  "website": null,
+  "chain_name": null,
+  "year_built": null,
+  "year_renovated": null,
+  "floors": null,
+  "total_room_count": null,
   "address": {
     "line1": "Mall Road",
     "line2": "Near Manu Market",
@@ -26,13 +32,37 @@
   "compliance": {
     "legal_entity_name": "Maple Ridge Hospitality Pvt Ltd",
     "business_type": "business",
+    "gstin": "02AABCM1234N1Z7",
+    "pan": "AABCM1234N",
+    "business_registration_number": null,
+    "gst_registered": false,
     "owner_kind": "individual_running_a_business",
     "owner_first_name": "Manish",
     "owner_last_name": "Verma",
     "owner_dob": "1990-01-15",
-    "gst_registered": false,
-    "gstin": "02AABCM1234N1Z7",
-    "pan": "AABCM1234N"
+    "owner_nationality": null,
+    "tan": null,
+    "fssai_license": null,
+    "fire_safety_certificate": null,
+    "trade_license": null,
+    "msme_udyam": null
+  },
+  "nearby": {
+    "nearest_airport": null,
+    "distance_to_airport_km": null,
+    "nearest_railway_station": null,
+    "distance_to_railway_km": null,
+    "nearest_bus_stand": null,
+    "distance_to_bus_km": null,
+    "points_of_interest": []
+  },
+  "payout": {
+    "account_holder_name": null,
+    "bank_name": null,
+    "branch": null,
+    "ifsc": null,
+    "account_type": null,
+    "upi_id": null
   },
   "room_types": [
     {
@@ -40,6 +70,9 @@
       "count": 6,
       "max_adults": 2,
       "max_children": 1,
+      "base_occupancy": null,
+      "base_child_occupancy": null,
+      "max_occupancy": null,
       "beds": [
         {
           "bed_type": "queen",
@@ -48,13 +81,31 @@
       ],
       "bathroom": "private",
       "size_sqm": 18.0,
+      "view": null,
+      "description": null,
       "base_rate": 2500,
       "currency": "INR",
+      "extra_adult_charge": null,
+      "extra_child_charge": null,
+      "smoking": false,
+      "extra_bed_available": false,
       "room_amenities": [
         "ac",
         "tv",
         "wifi",
         "kettle"
+      ],
+      "rate_plans": [
+        {
+          "code": "EP",
+          "name": "Room Only",
+          "price": 2500
+        },
+        {
+          "code": "CP",
+          "name": "Breakfast",
+          "price": 2800
+        }
       ]
     },
     {
@@ -62,6 +113,9 @@
       "count": 5,
       "max_adults": 2,
       "max_children": 2,
+      "base_occupancy": null,
+      "base_child_occupancy": null,
+      "max_occupancy": null,
       "beds": [
         {
           "bed_type": "king",
@@ -70,8 +124,13 @@
       ],
       "bathroom": "private",
       "size_sqm": 24.0,
+      "view": null,
+      "description": null,
       "base_rate": 3800,
       "currency": "INR",
+      "extra_adult_charge": null,
+      "extra_child_charge": null,
+      "smoking": false,
       "extra_bed_available": true,
       "room_amenities": [
         "ac",
@@ -79,6 +138,18 @@
         "wifi",
         "minibar",
         "balcony"
+      ],
+      "rate_plans": [
+        {
+          "code": "EP",
+          "name": "Room Only",
+          "price": 3800
+        },
+        {
+          "code": "CP",
+          "name": "Breakfast",
+          "price": 4100
+        }
       ]
     },
     {
@@ -86,6 +157,9 @@
       "count": 3,
       "max_adults": 4,
       "max_children": 2,
+      "base_occupancy": null,
+      "base_child_occupancy": null,
+      "max_occupancy": null,
       "beds": [
         {
           "bed_type": "king",
@@ -98,8 +172,13 @@
       ],
       "bathroom": "private",
       "size_sqm": 40.0,
+      "view": null,
+      "description": null,
       "base_rate": 6200,
       "currency": "INR",
+      "extra_adult_charge": null,
+      "extra_child_charge": null,
+      "smoking": false,
       "extra_bed_available": true,
       "room_amenities": [
         "ac",
@@ -108,6 +187,18 @@
         "minibar",
         "balcony",
         "sofa"
+      ],
+      "rate_plans": [
+        {
+          "code": "EP",
+          "name": "Room Only",
+          "price": 6200
+        },
+        {
+          "code": "CP",
+          "name": "Breakfast",
+          "price": 6500
+        }
       ]
     }
   ],
@@ -115,7 +206,8 @@
     "parking": {
       "available": true,
       "type": "free",
-      "on_site": true
+      "on_site": true,
+      "reservation_needed": false
     },
     "breakfast": {
       "available": true,
@@ -137,12 +229,18 @@
     "room_service": true,
     "airport_shuttle": false,
     "laundry": true,
+    "business_center": false,
+    "ev_charging": false,
     "elevator": true,
     "family_rooms": true,
+    "air_conditioning": false,
+    "power_backup": false,
+    "check_in_method": null,
     "languages_spoken": [
       "English",
       "Hindi"
     ],
+    "accessibility": [],
     "other": [
       "24x7 Front Desk",
       "Mountain View",
@@ -151,32 +249,7 @@
       "Couple Friendly"
     ]
   },
-  "policy": {
-    "checkin_from": "13:00",
-    "checkin_until": "23:00",
-    "checkout_from": "00:00",
-    "checkout_until": "11:00",
-    "cancellation_tier": "moderate",
-    "free_cancellation_until_hours": 24,
-    "prepayment": "partial",
-    "min_checkin_age": 18,
-    "smoking_allowed": false,
-    "pets_allowed": false,
-    "payment_methods": [
-      "cash",
-      "upi",
-      "visa",
-      "mastercard"
-    ],
-    "house_rules": [
-      "Valid Government ID mandatory at check-in",
-      "No refund on no-show"
-    ],
-    "child_policy": {
-      "children_allowed": true,
-      "free_stay_under_age": 6
-    }
-  },
+  "amenities": [],
   "photos": [
     {
       "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\exterior.jpg",
@@ -229,5 +302,58 @@
       "path": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\view.jpg",
       "caption": "Mountain view from room"
     }
-  ]
+  ],
+  "policy": {
+    "checkin_from": "13:00",
+    "checkin_until": "23:00",
+    "checkout_from": "00:00",
+    "checkout_until": "11:00",
+    "early_checkin_fee": null,
+    "late_checkout_fee": null,
+    "cancellation_tier": "moderate",
+    "free_cancellation_until_hours": 24,
+    "prepayment": "partial",
+    "min_checkin_age": 18,
+    "couple_friendly": false,
+    "unmarried_couples_allowed": false,
+    "local_ids_accepted": true,
+    "accepted_ids": [],
+    "smoking_allowed": false,
+    "quiet_hours_from": null,
+    "quiet_hours_until": null,
+    "pets_allowed": false,
+    "pet_fee": null,
+    "payment_methods": [
+      "cash",
+      "upi",
+      "visa",
+      "mastercard"
+    ],
+    "deposit_required": false,
+    "cancellation_cutoff_time": null,
+    "cancellation_fee_type": null,
+    "house_rules": [
+      "Valid Government ID mandatory at check-in",
+      "No refund on no-show"
+    ],
+    "child_policy": {
+      "children_allowed": true,
+      "min_age": null,
+      "free_stay_under_age": 6,
+      "extra_bed_fee": null,
+      "crib_available": false,
+      "crib_fee": null
+    }
+  },
+  "reception": {
+    "is_24h": true,
+    "hours_from": null,
+    "hours_until": null
+  },
+  "currency": "INR",
+  "timezone": null,
+  "billing_currency": null,
+  "taxes": [],
+  "opening_date": null,
+  "is_currently_open": true
 }

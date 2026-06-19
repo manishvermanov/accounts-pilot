@@ -299,6 +299,9 @@ class Policy(BaseModel):
     pets_allowed: bool = False
     pet_fee: Optional[float] = None
     payment_methods: list[str] = Field(default_factory=list)   # cash, visa, mastercard, upi…
+    deposit_required: bool = False           # OTA 'Do you require any deposits?' (Expedia, etc.)
+    cancellation_cutoff_time: Optional[str] = None   # local cutoff on check-in day, e.g. "18:00"
+    cancellation_fee_type: Optional[str] = None      # first_night | fifty_percent | full_stay
     house_rules: list[str] = Field(default_factory=list)
     child_policy: ChildPolicy = Field(default_factory=ChildPolicy)
 
@@ -327,6 +330,15 @@ class Payout(BaseModel):
     ifsc: Optional[str] = None
     account_type: Optional[str] = None      # savings | current
     upi_id: Optional[str] = None
+
+
+class TaxLine(BaseModel):
+    """A tax/fee the property includes in its rates (Expedia: City/Federal/Occupancy/District/
+    Hotel/GST/HST/VAT; India is typically GST). Leave the `taxes` list EMPTY to include no
+    taxes in the rate (the OTA tax switches stay off)."""
+    name: str                                # "GST", "City tax", "VAT", "Occupancy tax", …
+    basis: str = "percent_per_stay"          # percent_per_stay | amount_per_stay | amount_per_night
+    rate: float = 0                          # percent (0.001–100) or a fixed amount
 
 
 # --------------------------------------------------------------------------- #
@@ -366,6 +378,9 @@ class PropertyProfile(BaseModel):
 
     reception: Reception = Field(default_factory=Reception)
     currency: str = "INR"
+    timezone: Optional[str] = None               # IANA tz, e.g. "Asia/Kolkata" — drives OTA tz pickers
+    billing_currency: Optional[str] = None       # OTA payout/billing currency; falls back to `currency`
+    taxes: list[TaxLine] = Field(default_factory=list)   # taxes included in rates (empty = none)
     opening_date: Optional[str] = None           # ISO date the property opened / will open
     is_currently_open: bool = True
 

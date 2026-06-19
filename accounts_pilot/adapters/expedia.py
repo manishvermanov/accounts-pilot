@@ -16,8 +16,9 @@ from accounts_pilot.models.job import GateKind
 from accounts_pilot.models.property_profile import PropertyProfile
 from accounts_pilot.runtime.browser import BrowserRuntime
 
-# Expedia Partner Central self-onboarding ("list your property") entry point.
-CONNECT_URL = "https://join.expediapartnercentral.com/"
+# Expedia Partner Central "list your property" entry point (the in-app list flow; the
+# operator signs in first, then this lands on the onboarding wizard).
+CONNECT_URL = "https://apps.expediapartnercentral.com/en_US/list"
 
 
 class ExpediaAdapter(OTAAdapter):

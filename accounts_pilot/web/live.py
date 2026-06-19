@@ -1074,6 +1074,34 @@ class LiveSession:
         except Exception:
             return False
 
+    def _set_react_select(self, loc, want) -> bool:
+        """Set a React-controlled <select> so the value STICKS and React's onChange fires
+        (so a dependent dropdown like State repopulates for the chosen Country). Playwright's
+        select_option sets the option but a controlled <select> can revert it; instead match
+        an option by value/text and set via the NATIVE value setter + bubbling input/change.
+        `want` may be a 'a|b|c' candidate list (most specific first). Exact match wins over a
+        substring match (so 'IN' picks India by value, not 'Argentina' by includes)."""
+        cands = [c.strip() for c in str(want).split("|") if c.strip()] or [str(want)]
+        try:
+            val = loc.evaluate(
+                "(el, cands) => {"
+                " const norm = s => (s||'').toLowerCase().trim();"
+                " const setVal = v => { const d=Object.getOwnPropertyDescriptor("
+                "   window.HTMLSelectElement.prototype,'value');"
+                "   (d&&d.set?d.set:function(x){el.value=x;}).call(el, v);"
+                "   el.dispatchEvent(new Event('input',{bubbles:true}));"
+                "   el.dispatchEvent(new Event('change',{bubbles:true})); };"
+                " for (const c of cands) { const nc=norm(c);"     # exact value/text first
+                "  for (const o of el.options) {"
+                "   if (norm(o.value)===nc || norm(o.textContent)===nc) { setVal(o.value); return o.value; } } }"
+                " for (const c of cands) { const nc=norm(c);"     # then a substring of the label
+                "  for (const o of el.options) {"
+                "   if (o.value && norm(o.textContent).includes(nc)) { setVal(o.value); return o.value; } } }"
+                " return null; }", cands)
+            return val is not None
+        except Exception:
+            return False
+
     def _fill_kyp(self, profile_data) -> bool:
         """Deterministic 'Partner verification' (Know Your Partner) fill — the page has
         STABLE name= attributes, so we don't need the LLM. Picks the INDIVIDUAL option
@@ -1956,6 +1984,173 @@ class LiveSession:
     # _open_and_pick/_select_robust) so they degrade safely; tighten the
     # exact data-* ids after the first live run from data/training/expedia/.
     # ------------------------------------------------------------------ #
+    def _fill_expedia_classification(self, profile_data) -> bool:
+        """Expedia 'What would you like to list?' landing wizard (apps…/en_US/list). Two
+        choice CARDS rendered as <div role='presentation'> — the scraper/LLM can't see them
+        as clickable, so autopilot instead clicks the 'List your property' anchor (which only
+        scrolls to #ulx-hero) and loops forever. Pick the right card by id from property_type:
+        Lodging (#classification_lodging) for a hotel/motel/B&B, else Private residence."""
+        page = self.rt.page
+        # The landing wizard is an SPA that keeps the classification cards in the DOM (hidden)
+        # on later steps — so gate on VISIBILITY, not mere presence, or we'd click a hidden
+        # card every pass and churn the form back to its default. Also restrict to the landing
+        # URL (…/list, not …/list/<step>).
+        try:
+            low = (page.url or "").lower().rstrip("/")
+            on_landing = low.endswith("/list")
+            lod = page.locator("#classification_lodging").first
+            pr = page.locator("#classification_privateResidence").first
+            visible = ((lod.count() and lod.is_visible()) or (pr.count() and pr.is_visible()))
+        except Exception:
+            on_landing, visible = False, False
+        if not (on_landing and visible):
+            return False
+        ptype = str(profile_data.get("property_type", "hotel")).lower()
+        # Expedia splits the world into Lodging vs Private residence. Whole-property rentals
+        # (apartment/villa/home/homestay) are 'Private residence'; everything hotel-like is Lodging.
+        residence = ptype in ("apartment", "villa", "holiday_home", "homestay")
+        target = "#classification_privateResidence" if residence else "#classification_lodging"
+        try:
+            el = page.locator(target).first
+            if el.count() == 0:                       # fallback to Lodging if the id shifted
+                el = page.locator("#classification_lodging").first
+            if el.count():
+                self._click_robust(el)
+                self._say(f"  · Expedia → ‘{'Private residence' if residence else 'Lodging'}’ "
+                          f"(classification card)")
+                self.rt.think(1.1, 1.7)
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _fill_expedia_typeahead(self, profile_data) -> bool:
+        """Expedia Step-1 location TYPEAHEAD (…/list/location, #locationTypeAhead) — a single
+        'Enter property name or address...' box with Google-style autocomplete. Type the
+        property + address and pick the first suggestion (Expedia's verified happy path). If
+        nothing matches — common for dummy data — the walker's Next click drops to the
+        manual-address fallback (handled by _fill_expedia_manual_location). Types once."""
+        page = self.rt.page
+        try:
+            box = page.locator("#locationTypeAhead").first
+            if box.count() == 0:
+                return False
+            if (box.input_value() or "").strip():
+                return False                          # already typed — let Next advance it
+        except Exception:
+            return False
+
+        addr = profile_data.get("address", {}) or {}
+        parts = [p for p in (profile_data.get("display_name"), addr.get("line1"),
+                             addr.get("city"), addr.get("state")) if p]
+        if str(addr.get("country", "")).upper() in ("IN", "INDIA"):
+            parts.append("India")
+        query = ", ".join(parts)
+        if not query:
+            return False
+        try:
+            self._click_robust(box)
+            box.fill("")
+            page.keyboard.type(query, delay=55)
+            self.rt.think(1.4, 2.1)                   # let the autocomplete render
+            picked = False
+            for sel in ("[role='listbox'] [role='option']", "ul[role='listbox'] li",
+                        "[data-wdio*='suggestion']", "[data-wdio*='result']",
+                        "[class*='typeahead'] li", "[class*='suggestion']", ".pac-item"):
+                o = page.locator(sel).first
+                if o.count() and o.is_visible():
+                    self._click_robust(o)
+                    picked = True
+                    break
+            if not picked:                            # nudge the highlighted suggestion, if any
+                page.keyboard.press("ArrowDown"); self.rt.think(0.3, 0.5)
+                page.keyboard.press("Enter")
+            self._say(f"  · Expedia location typeahead → ‘{query}’"
+                      + (" (picked suggestion)" if picked else " (no match — manual fallback)"))
+            self.rt.think(0.8, 1.3)
+            return True
+        except Exception:
+            return False
+
+    def _fill_expedia_manual_location(self, profile_data) -> bool:
+        """Expedia 'manual address' step (…/list/manual-location, exact ids #country/#address1/
+        #stateProvince/#postalCode). ORDER MATTERS: Country must be set FIRST — it drives ZIP
+        validation (a 6-digit Indian PIN reads as 'invalid' while the country defaults to US)
+        AND repopulates the State dropdown with that country's regions. So set Country →
+        Street/Apt/City → State → ZIP, idempotently across passes (Next stays disabled until
+        every required field is valid)."""
+        page = self.rt.page
+        try:
+            if page.locator("#country, #address1, #manualAddressNextBtn").count() == 0:
+                return False
+        except Exception:
+            return False
+
+        addr = profile_data.get("address", {}) or {}
+        cc = str(addr.get("country", "")).upper()
+        iso = "IN" if cc in ("IN", "INDIA") else (addr.get("country") or "")
+        country_label = "India" if cc in ("IN", "INDIA") else (addr.get("country") or "")
+        did = 0
+
+        # 1) COUNTRY first — drives ZIP validation + repopulates the State dropdown.
+        try:
+            csel = page.locator("#country").first
+            if csel.count():
+                cur = (csel.input_value() or "").strip()
+                if iso and cur != iso:
+                    # React-controlled <select> — set via native setter so it STICKS and the
+                    # State dropdown repopulates (select_option alone reverts to the US default)
+                    if self._set_react_select(csel, f"{iso}|{country_label}"):
+                        did += 1
+                        self._say(f"  · Expedia country → {country_label}")
+                        self.rt.think(1.1, 1.7)        # let State repopulate + ZIP re-validate
+        except Exception:
+            pass
+
+        # 2) street / apt / city text inputs
+        for _id, val in (("#address1", addr.get("line1")), ("#address2", addr.get("line2")),
+                         ("#city", addr.get("city"))):
+            if not val:
+                continue
+            try:
+                el = page.locator(_id).first
+                if el.count() and (el.input_value() or "").strip() != str(val):
+                    if self._set_react_input(el, str(val)):
+                        did += 1
+            except Exception:
+                pass
+
+        # 3) STATE — only after country is set (the options are that country's regions now).
+        state = addr.get("state")
+        if state:
+            try:
+                ssel = page.locator("#stateProvince").first
+                if ssel.count() and not (ssel.input_value() or "").strip():
+                    if self._set_react_select(ssel, str(state)):
+                        did += 1
+                        self._say(f"  · Expedia state → {state}")
+            except Exception:
+                pass
+
+        # 4) ZIP last — (re)fill so it validates under the now-correct country.
+        pin = addr.get("postal_code")
+        if pin:
+            try:
+                z = page.locator("#postalCode").first
+                if z.count():
+                    cls = (z.get_attribute("class") or "")
+                    cur = (z.input_value() or "").strip()
+                    if cur != str(pin) or "invalid" in cls:
+                        if self._set_react_input(z, str(pin)):
+                            did += 1
+            except Exception:
+                pass
+
+        if did:
+            self._say(f"  ✓ Expedia manual address — {addr.get('city','')}, "
+                      f"{addr.get('state','')} ({did} field(s))")
+        return did > 0
+
     def _fill_expedia_location(self, profile_data) -> bool:
         """Expedia 'Where's your property located?' / address step. The address is every
         OTA's LLM blind spot: a Google-Places-style autocomplete search box plus structured
@@ -2172,6 +2367,101 @@ class LiveSession:
                 self.rt.think(0.3, 0.7)
         if did:
             self._say(f"  ✓ Expedia check-in/out times ({did})")
+        return did > 0
+
+    def _fill_expedia_policies(self, profile_data) -> bool:
+        """Expedia onboarding 'Policies and settings' (…/onboarding/policiesAndSettings). Its
+        required custom widgets defeat the LLM, and the LLM actively HARMS the tax section
+        (typing 0 into unchecked tax % inputs → 'invalid', which blocks Next). Own this page:
+        pick a payment method, set Property time zone + Billing currency, and CLEAR any invalid
+        tax % the LLM left (taxes stay optional/unchecked). Blocks the LLM for this page."""
+        page = self.rt.page
+        try:
+            is_pol = ("policiesandsettings" in (page.url or "").lower()
+                      or page.locator("#timeZoneId, select[name='billingCurrency']").count() > 0)
+        except Exception:
+            is_pol = False
+        if not is_pol:
+            return False
+
+        pol = profile_data.get("policy", {}) or {}
+        pays = [str(x).lower() for x in (pol.get("payment_methods") or [])]
+        cc = str((profile_data.get("address", {}) or {}).get("country", "")).upper()
+        did = 0
+
+        # 1) Payment methods — at least one switch must be ON ('Please select an option').
+        want_cards = (not pays) or any(k in pays for k in
+                                       ("visa", "mastercard", "amex", "card", "credit", "debit"))
+        want_cash = "cash" in pays
+        for txt, want in (("Credit / debit cards", want_cards), ("Cash", want_cash)):
+            if not want:
+                continue
+            try:
+                lab = page.locator("label.fds-switch", has_text=txt).first
+                chk = lab.locator("input[type='checkbox']").first
+                if chk.count() and not chk.is_checked():
+                    self._click_robust(lab.locator(".fds-switch-control").first)
+                    self._say(f"  · Expedia payment → {txt}")
+                    did += 1
+            except Exception:
+                pass
+
+        # 1b) Deposits — the chip defaults to 'No'; only switch to 'Yes' if the profile says so.
+        if pol.get("deposit_required"):
+            try:
+                yes = page.locator(".depositSectionChips .fds-chip-item, #deposit .fds-chip-item",
+                                   has_text="Yes").first
+                if yes.count():
+                    self._click_robust(yes)
+                    self._say("  · Expedia deposit → Yes")
+                    did += 1
+            except Exception:
+                pass
+
+        # 2) Property time zone (required) — prefer the explicit `timezone`, else derive from country.
+        try:
+            tz = page.locator("#timeZoneId").first
+            if tz.count() and (tz.input_value() or "0") in ("", "0"):
+                tzwant = (profile_data.get("timezone") or "").strip()
+                cands = []
+                if tzwant:                            # IANA like 'Asia/Kolkata' → city + raw
+                    cands += [tzwant.split("/")[-1].replace("_", " "), tzwant]
+                if cc in ("IN", "INDIA"):
+                    cands += ["Chennai, Kolkata, Mumbai, New Delhi", "Kolkata", "GMT+05:30"]
+                if cands and self._set_react_select(tz, "|".join(cands)):
+                    self._say(f"  · Expedia time zone → {tzwant or 'IST (GMT+05:30)'}")
+                    did += 1
+        except Exception:
+            pass
+
+        # 3) Billing currency (required) → explicit billing_currency, else the property currency.
+        try:
+            bc = page.locator("select[name='billingCurrency']").first
+            cur = profile_data.get("billing_currency") or profile_data.get("currency") or "INR"
+            if bc.count() and not (bc.input_value() or "").strip():
+                if self._set_react_select(bc, cur):
+                    self._say(f"  · Expedia billing currency → {cur}")
+                    did += 1
+        except Exception:
+            pass
+
+        # 4) Clear the LLM's invalid tax zeros — taxes are OPTIONAL; an unchecked tax with a
+        #    0 in its % box reads as 'invalid' and blocks Next. Empty them so they're ignored.
+        try:
+            inv = page.locator("label.fds-field.invalid input")
+            for i in range(inv.count()):
+                el = inv.nth(i)
+                try:
+                    if (el.input_value() or "").strip():
+                        self._set_react_input(el, "")
+                        did += 1
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        if did:
+            self._say(f"  ✓ Expedia policies & settings ({did} field(s))")
         return did > 0
 
     def _dropdown_already_set(self, loc, want, require_time: bool = False) -> bool:
@@ -3429,6 +3719,20 @@ class LiveSession:
                 if self.ota == "agoda" and not navigated and not mmt_basic:
                     mmt_basic = self._fill_agoda_pricing(profile_data)
 
+                # 0a9e) EXPEDIA landing wizard 'What would you like to list?' — click the
+                #       Lodging / Private-residence card (role=presentation divs the LLM can't
+                #       see; otherwise autopilot loops on the scroll-only CTA). Navigates.
+                if self.ota == "expedia" and self._fill_expedia_classification(profile_data):
+                    navigated = True
+                # 0a9f0) EXPEDIA Step-1 location TYPEAHEAD — type address into #locationTypeAhead,
+                #        pick a suggestion; Next then advances (to manual fallback for dummy data).
+                if self.ota == "expedia" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_expedia_typeahead(profile_data)
+                # 0a9f) EXPEDIA 'manual address' step — exact-id handler, Country FIRST (drives
+                #       ZIP validation + repopulates State). Runs before the generic location
+                #       handler so the country-first ordering wins on this page.
+                if self.ota == "expedia" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_expedia_manual_location(profile_data)
                 # 0a10) EXPEDIA 'Location' step — address autocomplete + structured fields +
                 #       Country/State/City dropdowns (the universal LLM blind spot). Blocks LLM.
                 if self.ota == "expedia" and not navigated and not mmt_basic:
@@ -3436,6 +3740,10 @@ class LiveSession:
                 # 0a11) EXPEDIA 'Rooms' — room-type / bed-type dropdowns (LLM does size/rate).
                 if self.ota == "expedia" and not navigated and not mmt_basic:
                     self._fill_expedia_rooms(profile_data)
+                # 0a11b) EXPEDIA 'Policies and settings' — payment method + time zone + billing
+                #        currency (required), and CLEAR the LLM's invalid tax zeros. Blocks LLM.
+                if self.ota == "expedia" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_expedia_policies(profile_data)
                 # 0a12) EXPEDIA check-in/out time pickers (24h↔12h format).
                 if self.ota == "expedia" and not navigated and not mmt_basic:
                     self._fill_expedia_times(profile_data)
