@@ -89,6 +89,25 @@ def test_classification_defers_when_absent():
 
 
 # --------------------------------------------------------------------------- #
+# optional 'import from Booking.com URL' — we SKIP it (Next, never Add)
+# --------------------------------------------------------------------------- #
+def test_skip_booking_import_clicks_next():
+    nextbtn = FakeLocator(count=1, tag="button", label="Next")
+    page = FakePage([{"url": "http://x/list", "heading": "h",
+                      "body": "Use your Booking.com URL to list your property faster"}],
+                    locators={"role:button": nextbtn})
+    s = _expedia(page)
+    assert s._skip_expedia_booking_import({}) is True
+    assert nextbtn.clicked
+
+
+def test_skip_booking_import_defers_elsewhere():
+    page = FakePage([{"url": "http://x/other", "heading": "h", "body": "a normal page"}])
+    s = _expedia(page)
+    assert s._skip_expedia_booking_import({}) is False
+
+
+# --------------------------------------------------------------------------- #
 # manual address step: country FIRST, then fields
 # --------------------------------------------------------------------------- #
 def _manual_addr_profile():

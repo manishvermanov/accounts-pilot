@@ -18,7 +18,45 @@ from typing import Optional
 
 from accounts_pilot.adapters import get_adapter
 from accounts_pilot.config import settings
+from accounts_pilot.photos import prepare_many, prepare_photo
 from accounts_pilot.runtime.browser import BrowserRuntime
+
+
+def _dd_norm(s) -> str:
+    """Normalise a dropdown label for matching: strip accents, collapse whitespace, lowercase."""
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or "")).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def _dd_strip_paren(s: str) -> str:
+    import re
+    return re.sub(r"\s*\([^)]*\)\s*", " ", s).strip()
+
+
+def dropdown_tier(opt, want) -> int:
+    """How well a dropdown OPTION matches a WANTED value. Lower = better match:
+      0  exact
+      1  exact after dropping a '(…)' suffix  ('Chhattisgarh (CG)' == 'Chhattisgarh')
+      2  option starts with want at a word boundary  ('Chhattisgarh State' for 'Chhattisgarh')
+      3  want starts with option at a word boundary
+      99 no match
+    There is intentionally NO loose-substring tier — that's what made the picker grab
+    'Deluxe Suite' for 'Deluxe' or click a stray page fragment. Exact always beats prefix."""
+    o, w = _dd_norm(opt), _dd_norm(want)
+    if not o or not w:
+        return 99
+    if o == w:
+        return 0
+    op, wp = _dd_strip_paren(o), _dd_strip_paren(w)
+    if op and op == wp:
+        return 1
+    if wp and op.startswith(wp) and (len(op) == len(wp) or not op[len(wp)].isalnum()):
+        return 2
+    if op and wp.startswith(op) and (len(wp) == len(op) or not wp[len(op)].isalnum()):
+        return 3
+    return 99
 
 
 class LiveSession:
@@ -669,42 +707,57 @@ class LiveSession:
             opts = page.evaluate(tag, [list(before), [str(v) for v in (values or [])]]) or []
         except Exception:
             opts = []
-        def norm(s):
-            return (s or "").lower().strip()
-        # 1) match among the newly-revealed options
-        for v in values:                          # prefer a value match (exact, then contains)
-            nv = norm(v)
-            if not nv:
+        # 1) pick the STRONGEST precise match among the newly-revealed options (so 'Deluxe'
+        #    lands on 'Deluxe', never on 'Deluxe Suite')
+        best = None                                   # (tier, opt)
+        for v in (values or []):
+            if not _dd_norm(v):
                 continue
             for o in (opts or []):
-                ot = norm(o["text"])
-                if ot == nv or nv in ot or ot in nv:
-                    try:
-                        self._click_robust(page.locator(f'[data-ap-opt="{o["idx"]}"]').first)
-                        self._say(f"    · dropdown → ‘{o['text']}’")
-                        return True
-                    except Exception:
-                        pass
-        # 2) broad scan across ALL visible options — long / virtualised lists (Agoda's
-        #    State & City) frequently DON'T reveal the wanted row via the diff, so the old
-        #    code fell through to 'first option'. Find the wanted value by text anywhere in
-        #    the list, scroll it into view, click it. Only matches the wanted value → never wrong.
+                t = dropdown_tier(o["text"], v)
+                if t < 99 and (best is None or t < best[0]):
+                    best = (t, o)
+            if best and best[0] == 0:
+                break
+        if best:
+            try:
+                self._click_robust(page.locator(f'[data-ap-opt="{best[1]["idx"]}"]').first)
+                self._say(f"    · dropdown → ‘{best[1]['text']}’")
+                return True
+            except Exception:
+                pass
+
+        # 2) broad scan — long/virtualised lists (State/City) don't reveal every row in the
+        #    diff. Scan ONLY inside the open dropdown container (never the whole page, so a
+        #    stray clickable can't be hit), and require the SAME precise tiered match.
         pick_js = r"""([wantList]) => {
-          const want = wantList.map(s=>(s||'').toLowerCase().replace(/\s+/g,' ').trim()).filter(s=>s.length>1);
-          if(!want.length) return null;
+          const norm=s=>(s||'').normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+          const strip=s=>s.replace(/\s*\([^)]*\)\s*/g,' ').trim();
+          const want=wantList.map(norm).filter(s=>s.length>1);
+          if(!want.length)return null;
           const vis=n=>{const r=n.getBoundingClientRect();return r.width>0&&r.height>0;};
           const txt=n=>((n.innerText||n.textContent||'')).replace(/\s+/g,' ').trim();
+          const tierOf=(o,w)=>{const op=strip(o),wp=strip(w);
+            if(o===w)return 0; if(op===wp)return 1;
+            if(wp&&op.startsWith(wp)&&(op.length===wp.length||!/[a-z0-9]/.test(op[wp.length])))return 2;
+            if(op&&wp.startsWith(op)&&(wp.length===op.length||!/[a-z0-9]/.test(wp[op.length])))return 3;
+            return 99;};
+          let roots=Array.from(document.querySelectorAll("[role=listbox],[data-testid='floater-container'],[class*='loater'],[class*='ropdown'],[class*='enu']")).filter(vis);
+          if(!roots.length)roots=[document.body];      // last resort, still precise-match only
           document.querySelectorAll('[data-ap-pick]').forEach(e=>e.removeAttribute('data-ap-pick'));
-          const nodes=document.querySelectorAll('[role=option],li,div,span,p,a');
-          for (const n of nodes){
-            if(!vis(n))continue; const t=txt(n); if(!t||t.length>60)continue;
-            if(n.children.length>1)continue;
-            if(n.tagName==='INPUT'||n.querySelector('input,textarea'))continue;
-            let cur=''; try{cur=getComputedStyle(n).cursor;}catch(e){}
-            if(!(cur==='pointer'||(n.getAttribute&&n.getAttribute('role')==='option')))continue;
-            const tl=t.toLowerCase();
-            for(const w of want){ if(tl===w||tl.includes(w)||w.includes(tl)){ n.setAttribute('data-ap-pick','1'); n.scrollIntoView({block:'center'}); return t; } }
+          let best=null;
+          for(const root of roots){
+            root.querySelectorAll('[role=option],li,div,span,p,a').forEach(n=>{
+              if(!vis(n))return; const t=txt(n); if(!t||t.length>60)return;
+              if(n.children.length>1)return;
+              if(n.tagName==='INPUT'||n.querySelector('input,textarea'))return;
+              let cur=''; try{cur=getComputedStyle(n).cursor;}catch(e){}
+              if(!(cur==='pointer'||(n.getAttribute&&n.getAttribute('role')==='option')))return;
+              const nt=norm(t);
+              for(const w of want){const tr=tierOf(nt,w); if(tr<99&&(!best||tr<best.tier))best={tier:tr,node:n,text:t};}
+            });
           }
+          if(best){best.node.setAttribute('data-ap-pick','1');best.node.scrollIntoView({block:'center'});return best.text;}
           return null;
         }"""
         try:
@@ -864,15 +917,36 @@ class LiveSession:
         import urllib.request
 
         out: list[str] = []
+        # parallel metadata, so the upload routing knows each photo's MIS tag (caption) and
+        # which room it belongs to (room_type) — both come straight from the MIS, no ML needed.
+        self._photo_meta = []
         cache_dir = os.path.join(tempfile.gettempdir(), "accounts_pilot_photos")
         os.makedirs(cache_dir, exist_ok=True)
+        photos = list(photos or [])
+
+        def _keep(local_path, ph):
+            out.append(local_path)
+            self._photo_meta.append({
+                "path": local_path,
+                "caption": (getattr(ph, "caption", None) or "").strip(),
+                "room_type": (getattr(ph, "room_type", None) or "").strip(),
+            })
+
+        # how many actually need fetching (so we can show progress instead of dead silence)
+        to_fetch = [ph for ph in photos
+                    if not (getattr(ph, "path", None) and os.path.exists(getattr(ph, "path", None)))
+                    and getattr(ph, "url", None)]
+        if to_fetch:
+            self._say(f"  · photos: fetching {len(to_fetch)} image(s) from the MIS URLs "
+                      "(one-time; cached for next run)…")
         downloaded = 0
-        for ph in (photos or []):
+        fetch_i = 0
+        for ph in photos:
             path = getattr(ph, "path", None)
             url = getattr(ph, "url", None)
             # 1) a real local file always wins
             if path and os.path.exists(path):
-                out.append(path)
+                _keep(path, ph)
                 continue
             # 2) otherwise pull the remote url (S3 / CDN) once, cached by url hash
             if not url:
@@ -882,23 +956,33 @@ class LiveSession:
                 ext = ".jpg"
             dest = os.path.join(cache_dir, hashlib.sha1(url.encode("utf-8")).hexdigest() + ext)
             if os.path.exists(dest) and os.path.getsize(dest) > 0:
-                out.append(dest)
+                _keep(dest, ph)
                 continue
+            fetch_i += 1
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (AccountsPilot)"})
-                with urllib.request.urlopen(req, timeout=30) as r:
+                with urllib.request.urlopen(req, timeout=15) as r:   # short timeout so one dead url can't freeze fill
                     data = r.read()
                 if not data:
                     raise ValueError("empty body")
                 with open(dest, "wb") as f:
                     f.write(data)
-                out.append(dest)
+                _keep(dest, ph)
                 downloaded += 1
+                self._say(f"  · photo {fetch_i}/{len(to_fetch)} downloaded ({len(data)//1024} KB)")
             except Exception as e:
                 short = (url[:60] + "…") if len(url) > 60 else url
-                self._say(f"  ⚠ photo: couldn't download {short} ({type(e).__name__}) — skipped")
-        if downloaded:
-            self._say(f"  ✓ photos — downloaded {downloaded} remote image(s) to a temp cache for upload")
+                self._say(f"  ⚠ photo {fetch_i}/{len(to_fetch)}: couldn't download {short} "
+                          f"({type(e).__name__}) — skipped")
+        if not out:
+            if to_fetch:
+                self._say("  ⚠ photos: none of the MIS URLs produced an image — the photo gate will "
+                          "block. Check the URLs are public (not expired signed links).")
+        elif downloaded:
+            self._say(f"  ✓ photos — {len(out)} image(s) ready "
+                      f"({downloaded} freshly downloaded, {len(out) - downloaded} from cache)")
+        else:
+            self._say(f"  ✓ photos — {len(out)} image(s) ready (all from cache)")
         return out
 
     def _photo_preflight(self) -> None:
@@ -937,19 +1021,20 @@ class LiveSession:
             self._say(f"  ⚠ photos: {len(missing)} path(s) not found on disk (skipped): "
                       f"{', '.join(os.path.basename(m) for m in missing[:3])}"
                       + (" …" if len(missing) > 3 else ""))
-        if too_small:
-            ex = ', '.join(f'{nm} {kb:.0f}KB' for nm, kb in too_small[:3])
-            self._say(f"  ⚠ photos: {len(too_small)} under {MIN_KB}KB — OTAs reject these "
-                      f"(e.g. {ex}). Use larger/real images.")
-        if too_big:
-            ex = ', '.join(f'{nm} {mb:.1f}MB' for nm, mb in too_big[:3])
-            self._say(f"  ⚠ photos: {len(too_big)} over {MAX_MB}MB — too large (e.g. {ex}).")
+        # NOTE: orientation, portrait→landscape, oversize, and odd formats are all
+        # auto-corrected at upload time by the shared photo processor (accounts_pilot/photos.py),
+        # so these are informational — NOT blockers the operator must fix in the MIS.
+        autofix = []
         if portrait and not unreadable:
-            self._say(f"  ⚠ photos: {portrait} portrait — OTAs want landscape "
-                      f"(need ≥1 landscape; most should be landscape).")
-        if n >= MIN_COUNT and not too_small and not too_big and not missing:
-            self._say(f"  ✓ photos pre-flight: {n} images, all {MIN_KB}KB–{MAX_MB}MB"
-                      + ("" if unreadable else ", landscape ok") + " — good to upload.")
+            autofix.append(f"{portrait} portrait→landscape")
+        if too_big:
+            autofix.append(f"{len(too_big)} over {MAX_MB}MB→resized")
+        if too_small:
+            autofix.append(f"{len(too_small)} under {MIN_KB}KB→upscaled")
+        if autofix:
+            self._say(f"  · photos: {', '.join(autofix)} — the photo-fixer will auto-correct these on upload")
+        if n >= MIN_COUNT and not missing:
+            self._say(f"  ✓ photos pre-flight: {n} images ready (auto-fixed to upright/landscape/sized).")
 
     def _photos_file_input(self):
         """The Photos upload page has a (often hidden) <input type=file>. Find it across
@@ -983,6 +1068,9 @@ class LiveSession:
                 batch = getattr(self, "_photo_batch", 0) or len(q)
                 files = q[:batch]
                 del q[:batch]
+                files = self._prep_files(files)        # EXIF-orient → landscape → sized JPEG (all OTAs)
+                if not files:
+                    return
                 try:
                     fc.set_files(files)
                     self._say(f"  ✓ photos — fed {len(files)} file(s) to the dialog "
@@ -1000,7 +1088,7 @@ class LiveSession:
 
     def _upload_photos(self, inp, paths) -> bool:
         """Upload the property photos from the JSON to the page's file input."""
-        good = [p for p in (paths or []) if p and os.path.exists(p)]
+        good = self._prep_files([p for p in (paths or []) if p and os.path.exists(p)])
         if not good:
             self._say("  · photos: nothing on disk to upload (add paths to photos[] in the JSON)")
             return False
@@ -1050,7 +1138,7 @@ class LiveSession:
             if finp is None:
                 self._say(f"  · photos: no upload input here ({len(self._photo_queue)} left)")
                 break
-            chunk = self._photo_queue[:batch]
+            chunk = self._prep_files(self._photo_queue[:batch])   # orient → landscape → sized
             try:
                 finp.set_input_files(chunk)
                 del self._photo_queue[:batch]
@@ -1068,6 +1156,198 @@ class LiveSession:
             self.rt.think(1.5, 2.5)
         self._photo_queue = []                        # done — chooser handler won't re-feed
         return True
+
+    @staticmethod
+    def _photo_norm(s) -> str:
+        return "".join(ch for ch in (s or "").lower() if ch.isalnum())
+
+    @staticmethod
+    def _agoda_photo_ok(path) -> bool:
+        """Agoda rejects anything that isn't jpg/png, is >10MB, or is under 800×600.
+        Filtering to these BEFORE upload is the difference between the ≥3 gate clearing
+        and Agoda silently dropping the batch ('Some photos weren't added')."""
+        try:
+            if os.path.splitext(path)[1].lower() not in (".jpg", ".jpeg", ".png"):
+                return False
+            if os.path.getsize(path) > 10 * 1024 * 1024:
+                return False
+            try:
+                from PIL import Image
+                w, h = Image.open(path).size
+                if w < 800 or h < 600:
+                    return False
+            except Exception:
+                pass                                   # PIL missing → can't check dims, allow
+            return True
+        except Exception:
+            return False
+
+    def _agoda_prep_image(self, path):
+        """Prepare ONE image for upload via the shared OTA photo processor (EXIF-orient →
+        landscape white-pad → resize into the size window → clean JPEG). Returns the
+        prepared path or None. See accounts_pilot/photos.py."""
+        return prepare_photo(path)
+
+    def _prep_files(self, paths) -> list:
+        """Run a batch of images through the shared OTA photo processor before upload — so
+        EVERY OTA (Agoda, MakeMyTrip, Booking, …) uploads upright, landscape, sized JPEGs."""
+        return prepare_many(paths)
+
+    def _expand_agoda_rooms(self, page) -> None:
+        """Reveal Agoda's collapsed 'Room photos' section so each room's dropzone appears.
+        The expander is a button/toggle (not one of the data-element-name='add-photos'
+        dropzones), so clicking buttons labelled 'Add photos' opens the room sections."""
+        try:
+            if page.get_by_text("Room photos", exact=False).count() == 0:
+                return
+            cand = page.locator('button:has-text("Add photos"), [role="button"]:has-text("Add photos")')
+            for i in range(min(cand.count(), 4)):
+                try:
+                    cand.nth(i).scroll_into_view_if_needed(timeout=2000)
+                    cand.nth(i).click(timeout=2500)
+                    self.rt.think(1.0, 1.8)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    def _fill_agoda_photos(self) -> bool:
+        """Agoda's Photos page is NOT one upload box — it has a separate dropzone per
+        section: 'Property Photos' (hard-gated at ≥3 to continue) plus one per room type
+        (Deluxe, Deluxe Suite, …). The generic uploader dumped ALL ~90 photos into the
+        first input (Agoda choked, kept ~2, gate never cleared) and never fed the rooms.
+
+        Here we route by the tags the MIS already attaches to every image — no ML needed:
+          • property-tagged photos (Exterior / Reception-Lobby / Common / Amenities …)
+            → the Property dropzone, best 'main photo' (Exterior/Entrance) first;
+          • each room's photos (Photo.room_type, set from the MIS room_type_name)
+            → that room's dropzone, mapped by the wizard's room order.
+        A capped handful per section clears the gate and gives every room real photos."""
+        all_meta = [m for m in (getattr(self, "_photo_meta", None) or [])
+                    if m.get("path") and os.path.exists(m["path"])]
+        if not all_meta:                               # no meta → fall back to the flat path list
+            all_meta = [{"path": p, "caption": "", "room_type": ""}
+                        for p in (getattr(self, "_all_photo_paths", []) or []) if os.path.exists(p)]
+        if not all_meta:
+            self._say("  · photos: nothing resolved from the MIS URLs")
+            return False
+
+        # property pool = photos with NO room_type, best 'main photo' (Exterior/Entrance) first
+        PRIORITY = ["exterior", "facade", "entrance", "building", "reception", "lobby",
+                    "common", "amenit", "pool", "restaurant", "room", "bath"]
+
+        def _prio(cap):
+            c = (cap or "").lower()
+            return next((i for i, kw in enumerate(PRIORITY) if kw in c), len(PRIORITY))
+
+        property_pool = [m["path"] for m in sorted(
+            [m for m in all_meta if not m.get("room_type")], key=lambda m: _prio(m.get("caption")))]
+        room_buckets: dict = {}
+        for m in all_meta:
+            if m.get("room_type"):
+                room_buckets.setdefault(self._photo_norm(m["room_type"]), []).append(m["path"])
+        leftover_room = [m["path"] for m in all_meta if m.get("room_type")]
+        if not property_pool:                          # untagged data → use anything so the gate clears
+            property_pool = [m["path"] for m in all_meta]
+
+        def _prep_all(pool):
+            """Prepare EVERY image in the pool (orient → landscape → sized JPEG); skip unusable.
+            No cap — Agoda accepts a large multi-file set in one go, so we upload them all."""
+            out = []
+            for p in pool:
+                q = self._agoda_prep_image(p)
+                if q and q not in out:
+                    out.append(q)
+            return out
+
+        used_buckets: set = set()
+
+        def _match_room(head: str):
+            key = self._photo_norm(head)
+            cands = [bk for bk in room_buckets if bk not in used_buckets]
+            for bk in cands:                           # exact name match (Deluxe → deluxe)
+                if bk == key:
+                    used_buckets.add(bk); return bk
+            for bk in cands:                           # substring either way
+                if bk and (bk in key or key in bk):
+                    used_buckets.add(bk); return bk
+            if cands:                                  # else the largest unused bucket
+                bk = max(cands, key=lambda b: len(room_buckets[b]))
+                used_buckets.add(bk); return bk
+            return None
+
+        try:
+            page = self.rt.page
+        except Exception as e:
+            self._say(f"  – photos: no page ({type(e).__name__})")
+            return False
+
+        done: set = set()
+
+        def _feed_round() -> int:
+            """Feed every dropzone currently on the page that we haven't filled yet."""
+            try:
+                zones = page.locator('[data-element-name="add-photos"]')
+                n = zones.count()
+                heads = [t.strip() for t in page.locator("h2").all_inner_texts()]
+            except Exception:
+                return 0
+            got = 0
+            for i in range(n):
+                head = heads[i] if i < len(heads) else ""
+                is_prop = ("propert" in head.lower()
+                           or (i == 0 and not any("propert" in (h or "").lower() for h in heads)))
+                label = head or ("Property" if is_prop else f"room {i}")
+                if label in done:
+                    continue
+                if is_prop:
+                    base = property_pool
+                else:
+                    bk = _match_room(head)
+                    if bk:
+                        base = room_buckets.get(bk, [])
+                    else:                              # no bucket left → hand it the remaining room pool
+                        base = list(leftover_room)
+                        leftover_room.clear()
+                if not base:
+                    continue
+                self._say(f"  · photos — '{label}': preparing {len(base)} image(s)…")
+                chunk = _prep_all(base)                # ALL of them, no cap
+                if not chunk:
+                    continue
+                try:
+                    zones.nth(i).locator('input[type=file]').first.set_input_files(chunk)
+                    done.add(label); got += 1
+                    self._say(f"  ✓ photos — '{label}': uploaded ALL {len(chunk)} image(s)")
+                    # many files take longer to upload — wait proportionally before moving on
+                    self.rt.think(min(4 + len(chunk) * 0.4, 30), min(7 + len(chunk) * 0.5, 38))
+                except Exception as e:
+                    self._say(f"  – photos '{label}': {type(e).__name__}: {e}")
+            return got
+
+        self._say(f"  · photos: routing by MIS tags "
+                  f"({len(property_pool)} property, {len(leftover_room)} room images)")
+        total = _feed_round()                          # property + any rooms already visible
+        # let the property '≥3' gate settle (uploads are async)
+        try:
+            gate = page.get_by_text("at least 3 photos", exact=False)
+            for _ in range(15):
+                if gate.count() == 0:
+                    break
+                self.rt.think(2.0, 2.5)
+            self._say("  ✓ photos — property gate cleared" if gate.count() == 0
+                      else "  · photos — gate still showing; uploads may still be in flight")
+        except Exception:
+            pass
+        # rooms are often collapsed or render late — reveal them, then feed what's new
+        try:
+            self._expand_agoda_rooms(page)
+        except Exception:
+            pass
+        total += _feed_round()
+        if total:
+            self._say(f"  ✓ photos — filled {len(done)} section(s): {', '.join(sorted(done))}")
+        return total > 0
 
     def _norm_date(self, s) -> str:
         """Normalise a date to yyyy-mm-dd (what <input type=date> requires), accepting
@@ -1748,6 +2028,77 @@ class LiveSession:
             self._say(f"  – MMT 'Create New Room' click failed: {type(e).__name__}")
             return False
 
+    def _click_agoda_card(self, target: str) -> bool:
+        """Click the property-type CARD whose title matches `target`. Cards are clickable
+        <div>s whose text starts with the title then a description ('Hotel Multi-unit …').
+        Score every clickable candidate with the precise matcher: an exact title (tier 0)
+        beats a longer prefix/container (tier 2), and on a tie the SHORTER text wins — so
+        'Hotel' lands on the Hotel card, never 'Capsule Hotel' nor the whole grid."""
+        page = self.rt.page
+        js = r"""() => {
+          const vis=n=>{const r=n.getBoundingClientRect();return r.width>0&&r.height>0;};
+          const txt=n=>((n.innerText||n.textContent||'')).replace(/\s+/g,' ').trim();
+          document.querySelectorAll('[data-ap-card]').forEach(e=>e.removeAttribute('data-ap-card'));
+          let i=0; const out=[];
+          document.querySelectorAll('div,button,li,a,span,p').forEach(n=>{
+            if(!vis(n))return; const t=txt(n); if(t.length<2||t.length>200)return;
+            let cur=''; try{cur=getComputedStyle(n).cursor;}catch(e){}
+            if(cur!=='pointer' && !(n.getAttribute&&n.getAttribute('role')==='button'))return;
+            n.setAttribute('data-ap-card', String(i)); out.push({idx:i, text:t}); i++;
+          });
+          return out;
+        }"""
+        try:
+            cards = page.evaluate(js) or []
+        except Exception:
+            cards = []
+        best = None                                   # ((tier, len), card)
+        for c in cards:
+            t = dropdown_tier(c["text"], target)
+            if t < 99:
+                key = (t, len(c["text"]))
+                if best is None or key < best[0]:
+                    best = (key, c)
+        if best is None:
+            return False
+        try:
+            self._click_robust(page.locator(f'[data-ap-card="{best[1]["idx"]}"]').first)
+            return True
+        except Exception:
+            return False
+
+    def _fill_agoda_property_type(self, profile_data) -> bool:
+        """Agoda 'What type of property are you listing?' (category) and 'Which hotel-type
+        property best fits your place?' (sub-type) are custom CARD pages — no form controls,
+        so the LLM only guessed at them and they took 2-3 tries. Pick the right card
+        deterministically from the property's type, first pass, no LLM."""
+        page = self.rt.page
+        try:
+            head = (page.inner_text("h1,h2") or "").strip().lower()
+        except Exception:
+            head = ""
+        is_cat = "what type of property are you listing" in head
+        is_sub = "best fits your place" in head
+        if not (is_cat or is_sub):
+            return False
+        ptype = (profile_data.get("property_type") or "hotel").lower().replace("-", "_").replace(" ", "_")
+        if is_cat:
+            target = "Home-type" if any(h in ptype for h in ("villa", "bungalow", "cottage")) else "Hotel-type"
+        else:
+            SUB = {"hotel": "Hotel", "motel": "Motel", "resort": "Resort", "inn": "Inn",
+                   "lodge": "Lodge", "hostel": "Hostel", "guest_house": "Guest House",
+                   "guesthouse": "Guest House", "serviced_apartment": "Serviced Apartment",
+                   "apartment": "Serviced Apartment", "capsule_hotel": "Capsule Hotel",
+                   "capsule": "Capsule Hotel", "bed_and_breakfast": "Bed & Breakfast",
+                   "bnb": "Bed & Breakfast"}
+            target = SUB.get(ptype, "Hotel")
+        if self._click_agoda_card(target):
+            self._say(f"  ✓ Agoda property type → {target}")
+            self.rt.think(0.5, 0.9)
+            return True
+        self._say(f"  · Agoda property type: card ‘{target}’ not found")
+        return False
+
     def _fill_agoda_location(self, profile_data) -> bool:
         """Agoda onboarding step 1 ('Location'). Standard data-testid inputs + button
         dropdowns for State/City + a Google search box and map pin. The generic LLM is
@@ -1808,29 +2159,70 @@ class LiveSession:
             if self._set_react_input(el, str(val)):
                 did += 1
 
-        # C) State/Province + City button-dropdowns (only if still showing the placeholder)
-        for tid, label, want in (("state-province", "State/Province", addr.get("state")),
-                                 ("city", "City", addr.get("city"))):
+        # C) State/Province + City — these have NO data-testid (only the text inputs do);
+        #    they're <button> dropdowns identified by their field LABEL. The search/map
+        #    auto-fills them when it resolves, but when it doesn't (e.g. the pin lands in the
+        #    wrong country) we MUST pick them here or the page blocks ("Please enter state").
+        import re as _re
+
+        def _geo_btn(lbl):
+            for loc in (page.get_by_role("button", name=_re.compile(_re.escape(lbl), _re.I)),
+                        page.locator(f"xpath=//*[normalize-space(text())={lbl!r}]/following::button[1]"),
+                        page.locator(f'button:has-text("{lbl}")')):
+                try:
+                    if loc.count() and loc.first.is_visible():
+                        return loc.first
+                except Exception:
+                    continue
+            return None
+
+        for label, want in (("State/Province", addr.get("state")), ("City", addr.get("city"))):
             if not want:
                 continue
+            btn = _geo_btn(label)
+            if btn is None:
+                self._say(f"  · Agoda {label}: dropdown not found on the page")
+                continue
             try:
-                btn = page.locator(f"[data-testid='{tid}'] button").first
-                if btn.count() == 0:
-                    continue
                 cur = (btn.inner_text() or "").strip()
-                if cur and cur != label:
-                    continue                          # already chosen (e.g. by the search)
-                if self._open_and_pick(btn, [want], strict=True):   # geography — never guess
-                    did += 1
-                    self._say(f"  · Agoda {label} → {want}")
-                    self.rt.think(0.4, 0.8)
+                if cur and cur.lower() != label.lower():
+                    continue                          # already chosen (by the search/map)
             except Exception:
                 pass
+            if self._open_and_pick(btn, [want], strict=True):     # geography — never guess
+                did += 1
+                self._say(f"  · Agoda {label} → {want}")
+                self.rt.think(0.8, 1.3)               # let City repopulate after State is set
+            else:
+                self._say(f"  · Agoda {label}: couldn't find ‘{want}’ in the dropdown")
 
         if did:
             self._say(f"  ✓ Agoda location — {addr.get('city','')}, {addr.get('state','')} "
                       f"({did} field(s))")
         return did > 0
+
+    def _room_type_candidates(self, name) -> list:
+        """Ordered fallback list for an OTA 'Room type' dropdown. The MIS room name (e.g.
+        'Super Deluxe', 'Executive Suite') is often NOT a literal option in the OTA's fixed
+        list, so try: the full name → the recognised type keyword inside it → universal
+        defaults that almost every OTA has. The picker tries them in order, so the field is
+        ALWAYS filled with a valid option and the (required) page can advance."""
+        n = (name or "").strip()
+        cands = [n] if n else []
+        seen = {c.lower() for c in cands}
+        low = n.lower()
+        # longest/most-specific keywords first so 'Junior Suite' beats 'Suite'
+        KEYWORDS = ["presidential suite", "junior suite", "presidential", "penthouse",
+                    "executive", "family", "superior", "deluxe", "suite", "premier",
+                    "premium", "standard", "studio", "twin", "triple", "quadruple",
+                    "double", "single", "dormitory", "villa", "bungalow", "cottage", "apartment"]
+        for kw in KEYWORDS:
+            if kw in low and kw not in seen:
+                cands.append(kw.title()); seen.add(kw)
+        for d in ("Deluxe", "Standard", "Superior", "Double", "Standard Room", "Suite", "Room"):
+            if d.lower() not in seen:
+                cands.append(d); seen.add(d.lower())
+        return cands
 
     def _fill_agoda_rooms(self, profile_data) -> bool:
         """Agoda 'Setup your rooms & rates' (Step 3). The room SIZE/RATE/occupancy are plain
@@ -1848,6 +2240,29 @@ class LiveSession:
             return False
         rooms = profile_data.get("room_types", []) or []
         did = 0
+
+        # 0) Room type per room — the exact MIS name (e.g. 'Super Deluxe') usually isn't in
+        #    Agoda's fixed list, so map it to the closest available option. NON-strict on
+        #    purpose: a room type MUST be chosen or the required page blocks forever. We feed
+        #    an ordered candidate list (full name → type keyword → safe defaults) and pick the
+        #    best precise match; the picker only ever lands on a real option.
+        try:
+            ri = 0
+            for _ in range(len(rooms) + 3):           # bounded; one dropdown per room
+                btn = page.get_by_role("button", name="Room type").first
+                if btn.count() == 0 or not btn.is_visible():
+                    break
+                r = rooms[ri] if ri < len(rooms) else (rooms[-1] if rooms else {})
+                cands = self._room_type_candidates(r.get("name"))
+                if self._open_and_pick(btn, cands, strict=False):
+                    did += 1
+                    self._say(f"  · Agoda room {ri + 1} type ← ‘{r.get('name') or '?'}’")
+                    ri += 1
+                    self.rt.think(0.5, 0.9)
+                else:
+                    break                             # no option at all → stop (avoid a loop)
+        except Exception:
+            pass
 
         # 1) rate management → 'Set rate manually' (only if not already chosen)
         try:
@@ -1908,8 +2323,8 @@ class LiveSession:
             cont.querySelectorAll('*').forEach(n=>{ if(valEl) return; if(n.children.length===0){ const t=norm(n.textContent); if(/^\d+$/.test(t)){ valEl=n; val=parseInt(t,10);} } });
             let label='', probe=cont;
             for(let i=0;i<5 && probe;i++){ const t=norm(probe.textContent);
-              if(t.length<45 && /total occupancy limit/i.test(t)){label='occupancy';break;}
-              if(t.length<45 && /bathroom/i.test(t)){label='bathrooms';break;} probe=probe.parentElement; }
+              if(t.length<70 && /(total )?occupancy|occupancy limit|max(imum)?\s*(guests?|occupancy|adults?)|how many guests|guests? per|sleeps/i.test(t)){label='occupancy';break;}
+              if(t.length<70 && /bathroom|washroom/i.test(t)){label='bathrooms';break;} probe=probe.parentElement; }
             dec.setAttribute('data-ap-cnt','dec-'+idx);
             inc.setAttribute('data-ap-cnt','inc-'+idx);
             if(valEl) valEl.setAttribute('data-ap-cval','val-'+idx);
@@ -2182,6 +2597,47 @@ class LiveSession:
                 self._say(f"  · Expedia → ‘{'Private residence' if residence else 'Lodging'}’ "
                           f"(classification card)")
                 self.rt.think(1.1, 1.7)
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _skip_expedia_booking_import(self, profile_data) -> bool:
+        """Expedia optional 'Use your Booking.com URL to list your property faster' step. We do
+        NOT import from Booking — clear any URL the autopilot/LLM may have typed and click
+        'Next' (NOT 'Add', which would pull in the Booking listing). Navigates."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+        except Exception:
+            return False
+        if "booking.com" not in body or not any(
+                m in body for m in ("list your property faster", "bring over property details",
+                                    "link your booking.com")):
+            return False
+        # 1) clear any Booking.com URL the bot typed — we are NOT importing.
+        try:
+            for sel in ("input[placeholder*='booking.com' i]", "input[value*='booking.com' i]",
+                        "input[type='url']", "input[type='text']"):
+                el = self._find_visible(page, sel)
+                if el is not None:
+                    try:
+                        if (el.input_value() or "").strip():
+                            el.fill("")
+                    except Exception:
+                        pass
+                    break
+        except Exception:
+            pass
+        # 2) click 'Next' to SKIP (not 'Add').
+        try:
+            btn = page.get_by_role("button", name="Next", exact=True).first
+            if btn.count() == 0:
+                btn = page.locator("button:has-text('Next')").first
+            if btn.count() and btn.is_visible():
+                self._click_robust(btn)
+                self._say("  · Expedia → skipped Booking.com import (Next, no URL)")
+                self.rt.think(1.0, 1.6)
                 return True
         except Exception:
             pass
@@ -2626,6 +3082,492 @@ class LiveSession:
         if did:
             self._say(f"  ✓ Expedia policies & settings ({did} field(s))")
         return did > 0
+
+    # ----------------------------------------------------------------------- #
+    # AIRBNB — 'become a host' single-listing wizard
+    #
+    # Airbnb's create flow is one-question-per-screen (structure → privacy-type →
+    # location → floor-plan → amenities → photos → title → description → price), each
+    # with a persistent Back/Next footer. Selecting a card / driving a stepper / picking
+    # an amenity tile is invisible to the scraper+LLM, so each handler below OWNS that
+    # widget and leaves the ordinary fields to the generic walker. Every handler is
+    # body-text + URL gated and returns False (deferring to the LLM walker) when its
+    # step isn't on screen — Airbnb is heavily bot-protected, so the selectors are
+    # resilient first-pass and get tightened from one live run (read data/logs/airbnb.log
+    # + data/training/airbnb/ and lock the exact data-* ids), exactly like MMT/Agoda.
+    # ----------------------------------------------------------------------- #
+    def _airbnb_card_selected(self) -> bool:
+        """True if some card/radio on the current step already shows a selection — so a
+        re-fire of a card handler doesn't TOGGLE the choice back off (clicking a selected
+        Airbnb card deselects it). Lets the handler return 'handled' and let Next advance."""
+        try:
+            return self.rt.page.locator(
+                "[aria-checked='true'], [aria-pressed='true'], input:checked").count() > 0
+        except Exception:
+            return False
+
+    def _airbnb_pick_card(self, values) -> bool:
+        """Click the first card whose label matches one of `values`. Tries an accessible
+        button/text match first (stable across Airbnb's class churn), then the DOM-agnostic
+        card scanner (_click_agoda_card) as a live fallback."""
+        page = self.rt.page
+        for v in values:
+            if not v:
+                continue
+            for getter in (lambda v=v: page.get_by_role("button", name=v),
+                           lambda v=v: page.get_by_text(v, exact=False)):
+                try:
+                    loc = getter().first
+                    if loc.count() and loc.is_visible():
+                        self._click_robust(loc)
+                        return True
+                except Exception:
+                    pass
+        for v in values:                               # live DOM-agnostic fallback
+            try:
+                if v and self._click_agoda_card(str(v)):
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def _fill_airbnb_structure(self, profile_data) -> bool:
+        """Airbnb 'Which of these best describes your place?' — a grid of property-type
+        cards (House, Apartment, Hotel, Guest house, Bed & breakfast, Hostel, …). The
+        scraper sees a wall of identical buttons; pick the card from property_type. The
+        card doesn't auto-advance (Next does), so this BLOCKS the LLM and lets Continue
+        advance."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("which of these best describes" in body or "/structure" in url):
+            return False
+        if self._airbnb_card_selected():
+            return True                                # already chosen — let Next advance
+        ptype = str(profile_data.get("property_type", "hotel")).lower()
+        AIRBNB_STRUCTURE = {
+            "hotel": ["Hotel", "Boutique hotel"],
+            "resort": ["Resort", "Hotel"],
+            "apartment": ["Apartment", "Rental unit", "Serviced apartment"],
+            "aparthotel": ["Serviced apartment", "Aparthotel", "Apartment"],
+            "guesthouse": ["Guest house", "Guesthouse", "Bed & breakfast"],
+            "homestay": ["Guest house", "Home", "House"],
+            "bnb": ["Bed & breakfast", "Guest house"],
+            "hostel": ["Hostel", "Guest house"],
+            "villa": ["Villa", "House", "Home"],
+            "holiday_home": ["Home", "House", "Villa"],
+        }
+        cands = AIRBNB_STRUCTURE.get(ptype, ["House", "Hotel"])
+        if self._airbnb_pick_card(cands):
+            self._say(f"  ✓ Airbnb structure → {cands[0]}")
+            self.rt.think(0.5, 0.9)
+            return True
+        self._say(f"  · Airbnb structure: no card matched {cands}")
+        return False
+
+    def _fill_airbnb_privacy_type(self, profile_data) -> bool:
+        """Airbnb 'What type of place will guests have?' — An entire place / A room / A
+        shared room. A hotel/villa/apartment is an entire place; a hostel is a shared room;
+        a B&B/homestay/guesthouse rents a private room. Blocks the LLM."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("what type of place will guests have" in body
+                or "/privacy-type" in url or "/room-type" in url):
+            return False
+        if self._airbnb_card_selected():
+            return True
+        ptype = str(profile_data.get("property_type", "hotel")).lower()
+        if ptype == "hostel":
+            label = "A shared room"
+        elif ptype in ("bnb", "homestay", "guesthouse"):
+            label = "A room"
+        else:
+            label = "An entire place"
+        if self._airbnb_pick_card([label]):
+            self._say(f"  ✓ Airbnb privacy type → {label}")
+            self.rt.think(0.5, 0.9)
+            return True
+        return False
+
+    def _fill_airbnb_location(self, profile_data) -> bool:
+        """Airbnb 'Where's your place located?' — a map search box with an 'Enter address
+        manually' reveal. The address is every OTA's LLM blind spot: pick Country/region
+        FIRST (drives the ZIP format), then the structured Street/Apt/City/State/ZIP fields
+        (on Airbnb these are plain inputs, not dropdowns). Blocks the LLM for this page."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        markers = ("where's your place located", "where is your place located",
+                   "confirm your address", "enter your address", "your address")
+        try:
+            has_addr_input = page.locator(
+                "input[name*='address' i], input[id*='address' i], "
+                "input[aria-label*='street' i], input[placeholder*='address' i]").count() > 0
+        except Exception:
+            has_addr_input = False
+        if not (any(m in body for m in markers) or "/location" in url or has_addr_input):
+            return False
+
+        # reveal the manual-entry form if Airbnb is showing only the map search box
+        try:
+            for sel in ("button:has-text('Enter address manually')",
+                        "a:has-text('Enter address manually')",
+                        "[role='button']:has-text('Enter address manually')"):
+                link = page.locator(sel).first
+                if link.count() and link.is_visible():
+                    self._click_robust(link); self.rt.think(0.5, 0.9); break
+        except Exception:
+            pass
+
+        addr = profile_data.get("address", {}) or {}
+        cc = "IN" if str(addr.get("country", "")).upper() in ("IN", "INDIA") else str(addr.get("country") or "")
+        country = "India" if cc == "IN" else (addr.get("country") or "")
+        did = 0
+
+        # A) Country / region FIRST (native <select> or custom) — drives the ZIP format.
+        for sel in ("select[name*='country' i]", "select[id*='country' i]",
+                    "[data-testid='country-selector'] select",
+                    "button[aria-label*='country' i]", "button[aria-label*='region' i]"):
+            try:
+                loc = page.locator(sel).first
+                if loc.count() and loc.is_visible():
+                    if country and not self._dropdown_already_set(loc, country):
+                        if self._select_robust(loc, f"{cc}|{country}"):
+                            did += 1
+                            self._say(f"  · Airbnb country → {country}")
+                            self.rt.think(0.8, 1.3)
+                    break
+            except Exception:
+                continue
+
+        # B) structured text fields (Street / Apt / City / State / ZIP)
+        field_plan = [
+            (("input[name*='addressLine1' i]", "input[name*='street' i]", "input[id*='street' i]",
+              "input[aria-label*='street' i]", "input[placeholder*='street' i]"), addr.get("line1")),
+            (("input[name*='addressLine2' i]", "input[name*='apt' i]", "input[aria-label*='apt' i]",
+              "input[aria-label*='suite' i]"), addr.get("line2")),
+            (("input[name*='city' i]", "input[id*='city' i]", "input[aria-label*='city' i]"),
+             addr.get("city")),
+            (("input[name*='state' i]", "input[name*='province' i]", "input[aria-label*='state' i]",
+              "input[aria-label*='province' i]", "input[aria-label*='territory' i]"), addr.get("state")),
+            (("input[name*='zip' i]", "input[name*='postal' i]", "input[id*='zip' i]",
+              "input[aria-label*='zip' i]", "input[aria-label*='postal' i]"), addr.get("postal_code")),
+        ]
+        for sels, val in field_plan:
+            if not val:
+                continue
+            el = None
+            for sel in sels:
+                el = self._find_visible(page, sel)
+                if el is not None:
+                    break
+            if el is None:
+                continue
+            try:
+                if (el.input_value() or "").strip():
+                    continue                           # search/manual already filled it
+            except Exception:
+                pass
+            if self._set_react_input(el, str(val)):
+                did += 1
+        if did:
+            self._say(f"  ✓ Airbnb location — {addr.get('city','')}, {addr.get('state','')} "
+                      f"({did} field(s))")
+        return did > 0
+
+    def _airbnb_floor_counts(self, profile_data) -> dict:
+        """Derive Airbnb's floor-plan counters (Guests / Bedrooms / Beds / Bathrooms) from
+        the profile. The whole property lists as ONE 'entire place', so guests = total
+        capacity, bedrooms = total physical rooms, beds = total bed count, bathrooms = the
+        private-bath room count. Clamped to Airbnb's create-flow caps (16 guests / 50 else)."""
+        rooms = profile_data.get("room_types", []) or []
+        guests = beds = bedrooms = baths = 0
+        for r in rooms:
+            cnt = int(r.get("count", 1) or 1)
+            bedrooms += cnt
+            cap = int(r.get("max_adults", 2) or 2) + int(r.get("max_children", 0) or 0)
+            guests += cap * cnt
+            rbeds = sum(int(b.get("count", 1) or 1) for b in (r.get("beds") or [])) or 1
+            beds += rbeds * cnt
+            if str(r.get("bathroom", "private")).lower() == "private":
+                baths += cnt
+        bedrooms = int(profile_data.get("total_room_count") or bedrooms or 1)
+        guests = guests or 2
+        beds = beds or bedrooms
+        baths = baths or 1
+        return {"Guests": min(guests, 16), "Bedrooms": min(bedrooms, 50),
+                "Beds": min(beds, 50), "Bathrooms": min(baths, 50)}
+
+    def _airbnb_set_stepper(self, field: str, target) -> bool:
+        """Drive an Airbnb +/- stepper (data-testid='stepper-floorPlan<Field>-increase/
+        decrease-button', value in '-value') to `target`. Re-reads the value each pass and
+        clicks toward the target, stopping when it's reached, capped, or unreadable."""
+        page = self.rt.page
+        try:
+            target = int(target)
+        except Exception:
+            return False
+        if target < 0:
+            return False
+        inc = page.locator(f"[data-testid='stepper-floorPlan{field}-increase-button']").first
+        dec = page.locator(f"[data-testid='stepper-floorPlan{field}-decrease-button']").first
+        val = page.locator(f"[data-testid='stepper-floorPlan{field}-value']").first
+        try:
+            if inc.count() == 0 and dec.count() == 0:
+                return False
+        except Exception:
+            return False
+
+        def _read():
+            try:
+                if val.count():
+                    txt = (val.inner_text() or "").strip()
+                    digits = "".join(ch for ch in txt if ch.isdigit())
+                    if digits:
+                        return int(digits)
+            except Exception:
+                pass
+            return None
+
+        clicked = 0
+        for _ in range(40):
+            cur = _read()
+            if cur is None:                            # unreadable — blind-drive from 1 (Airbnb default)
+                for _ in range(max(0, target - 1)):
+                    try:
+                        if inc.count():
+                            self._click_robust(inc); clicked += 1; self.rt.think(0.15, 0.3)
+                    except Exception:
+                        break
+                break
+            if cur == target:
+                break
+            btn = inc if cur < target else dec
+            try:
+                if btn.count() == 0:
+                    break
+            except Exception:
+                break
+            self._click_robust(btn); clicked += 1; self.rt.think(0.15, 0.3)
+            nxt = _read()
+            if nxt is not None and nxt == cur:         # the click didn't move it (capped/disabled)
+                break
+        if clicked:
+            self._say(f"  · Airbnb {field.lower()} → {target}")
+        return clicked > 0
+
+    def _fill_airbnb_floor_plan(self, profile_data) -> bool:
+        """Airbnb 'Share some basics about your place' — the Guests/Bedrooms/Beds/Bathrooms
+        steppers. Blocks the LLM (the whole page is these counters)."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        try:
+            has_stepper = page.locator("[data-testid^='stepper-floorPlan']").count() > 0
+        except Exception:
+            has_stepper = False
+        if not ("share some basics about your place" in body or "/floor-plan" in url or has_stepper):
+            return False
+        counts = self._airbnb_floor_counts(profile_data)
+        did = 0
+        for field in ("Guests", "Bedrooms", "Beds", "Bathrooms"):
+            if self._airbnb_set_stepper(field, counts[field]):
+                did += 1
+        if did:
+            self._say(f"  ✓ Airbnb floor plan — {counts} ({did} stepper(s))")
+        return did > 0
+
+    def _airbnb_amenity_labels(self, profile_data) -> list:
+        """Map the profile's facilities → Airbnb amenity-tile labels."""
+        f = profile_data.get("facilities", {}) or {}
+        out: list = []
+
+        def add(x):
+            if x and x not in out:
+                out.append(x)
+
+        if (f.get("internet", {}) or {}).get("wifi", True):
+            add("Wifi")
+        park = f.get("parking", {}) or {}
+        if park.get("available"):
+            add("Free parking on premises" if str(park.get("type")) == "free"
+                else "Paid parking on premises")
+        if f.get("swimming_pool"):
+            add("Pool")
+        if f.get("air_conditioning"):
+            add("Air conditioning")
+        if f.get("fitness_center"):
+            add("Exercise equipment")
+        if f.get("ev_charging"):
+            add("EV charger")
+        if f.get("elevator"):
+            add("Elevator")
+        if f.get("laundry"):
+            add("Washer")
+        if (f.get("breakfast", {}) or {}).get("available"):
+            add("Breakfast")
+        ras = set()
+        for r in profile_data.get("room_types", []) or []:
+            for a in (r.get("room_amenities") or []):
+                ras.add(str(a).lower())
+        if "tv" in ras:
+            add("TV")
+        if "ac" in ras:
+            add("Air conditioning")
+        if any(k in ras for k in ("kitchen", "kitchenette")):
+            add("Kitchen")
+        return out
+
+    def _fill_airbnb_amenities(self, profile_data) -> bool:
+        """Airbnb 'Tell guests what your place has to offer' (+ the 'standout amenities'
+        screen) — toggle each amenity tile the profile declares. Idempotent: skips a tile
+        already pressed. Blocks the LLM."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("what your place has to offer" in body or "standout amenities" in body
+                or "tell guests what your place" in body
+                or "/amenities" in url or "/stand-out" in url):
+            return False
+        did = 0
+        for lab in self._airbnb_amenity_labels(profile_data):
+            for getter in (lambda lab=lab: page.get_by_role("button", name=lab),
+                           lambda lab=lab: page.get_by_text(lab, exact=False)):
+                try:
+                    loc = getter().first
+                    if not (loc.count() and loc.is_visible()):
+                        continue
+                    pressed = (loc.get_attribute("aria-pressed")
+                               or loc.get_attribute("aria-checked") or "").lower()
+                    if pressed == "true":
+                        break                          # already on
+                    self._click_robust(loc); did += 1
+                    self._say(f"  · Airbnb amenity → {lab}")
+                    break
+                except Exception:
+                    continue
+        if did:
+            self._say(f"  ✓ Airbnb amenities — {did} selected")
+        return did > 0
+
+    def _fill_airbnb_title(self, profile_data) -> bool:
+        """Airbnb 'Now, let's give your place a title' — fill the title field with the
+        property name (Airbnb caps it at 50 chars). Blocks the LLM."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("give your place a title" in body or "create your title" in body
+                or "/title" in url):
+            return False
+        title = (profile_data.get("display_name") or "").strip()[:50]
+        if not title:
+            return False
+        for sel in ("textarea[name*='title' i]", "textarea#title", "textarea",
+                    "input[name*='title' i]", "input[aria-label*='title' i]"):
+            el = self._find_visible(page, sel)
+            if el is None:
+                continue
+            try:
+                if (el.input_value() or "").strip():
+                    return True                        # already has a title
+            except Exception:
+                pass
+            if self._set_react_input(el, title):
+                self._say(f"  ✓ Airbnb title → “{title}”")
+                return True
+        return False
+
+    def _fill_airbnb_description(self, profile_data) -> bool:
+        """Airbnb 'Create your description' — fill the description textarea (Airbnb caps it
+        at 500 chars). Falls back to the first room's description. Blocks the LLM."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("create your description" in body or "how would you describe" in body
+                or "/description" in url):
+            return False
+        desc = (profile_data.get("description") or "").strip()
+        if not desc:
+            for r in profile_data.get("room_types", []) or []:
+                if (r.get("description") or "").strip():
+                    desc = r["description"].strip(); break
+        if not desc:
+            return False
+        desc = desc[:500]
+        for sel in ("textarea[name*='description' i]", "textarea#description", "textarea",
+                    "input[aria-label*='description' i]"):
+            el = self._find_visible(page, sel)
+            if el is None:
+                continue
+            try:
+                if (el.input_value() or "").strip():
+                    return True
+            except Exception:
+                pass
+            if self._set_react_input(el, desc):
+                self._say(f"  ✓ Airbnb description ({len(desc)} chars)")
+                return True
+        return False
+
+    def _fill_airbnb_price(self, profile_data) -> bool:
+        """Airbnb 'Now, set your price' — fill the nightly base price with the cheapest
+        room's base_rate (the entry price). Blocks the LLM."""
+        page = self.rt.page
+        try:
+            body = (page.inner_text("body") or "").lower()
+            url = (page.url or "").lower()
+        except Exception:
+            return False
+        if not ("set your price" in body or "set a weekday price" in body
+                or "set your base price" in body or "/price" in url):
+            return False
+        rates = []
+        for r in profile_data.get("room_types", []) or []:
+            try:
+                if r.get("base_rate"):
+                    rates.append(int(float(r["base_rate"])))
+            except Exception:
+                pass
+        if not rates:
+            return False
+        price = min(rates)
+        for sel in ("input#price", "[data-testid='price-input'] input", "input[name*='price' i]",
+                    "input[inputmode='numeric']", "input[aria-label*='price' i]"):
+            el = self._find_visible(page, sel)
+            if el is None:
+                continue
+            try:
+                cur = (el.input_value() or "").strip().lstrip("₹$").replace(",", "")
+                if cur and cur not in ("0", ""):
+                    return True
+            except Exception:
+                pass
+            if self._set_react_input(el, str(price)):
+                self._say(f"  ✓ Airbnb base price → {price}")
+                return True
+        return False
 
     def _dropdown_already_set(self, loc, want, require_time: bool = False) -> bool:
         """True if a dropdown already shows a real (non-placeholder) selection, so we don't
@@ -3865,6 +4807,11 @@ class LiveSession:
                 #       Does NOT block the LLM (it still fills bed type / room amenities).
                 if self.ota == "makemytrip" and not navigated and not mmt_basic:
                     self._fill_mmt_occupancy(profile_data)
+                # 0a5d) AGODA property-type CARD pages (category + sub-type) — deterministic,
+                #       first pass, no LLM (these took 2-3 tries via the LLM/empty-cache path).
+                if self.ota == "agoda" and not navigated and not mmt_basic:
+                    if self._fill_agoda_property_type(profile_data):
+                        mmt_basic = True              # handled → skip LLM; Continue advances
                 # 0a6) AGODA 'Location' step — search + structured address + state/city dropdowns.
                 if self.ota == "agoda" and not navigated and not mmt_basic:
                     mmt_basic = self._fill_agoda_location(profile_data)
@@ -3888,6 +4835,10 @@ class LiveSession:
                 #       Lodging / Private-residence card (role=presentation divs the LLM can't
                 #       see; otherwise autopilot loops on the scroll-only CTA). Navigates.
                 if self.ota == "expedia" and self._fill_expedia_classification(profile_data):
+                    navigated = True
+                # 0a9e2) EXPEDIA optional 'import from Booking.com URL' — SKIP it (clear any URL,
+                #        click Next, never 'Add'). Navigates.
+                if self.ota == "expedia" and not navigated and self._skip_expedia_booking_import(profile_data):
                     navigated = True
                 # 0a9f0) EXPEDIA Step-1 location TYPEAHEAD — type address into #locationTypeAhead,
                 #        pick a suggestion; Next then advances (to manual fallback for dummy data).
@@ -3913,15 +4864,41 @@ class LiveSession:
                 if self.ota == "expedia" and not navigated and not mmt_basic:
                     self._fill_expedia_times(profile_data)
 
+                # 0a13) AIRBNB 'become a host' wizard — single-listing flow. Each handler is
+                #       body-text gated and degrades to the LLM walker on any unmapped page.
+                #       Card/stepper/tile pages BLOCK the LLM (mmt_basic) and let Next advance.
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_structure(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_privacy_type(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_location(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_floor_plan(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_amenities(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_title(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_description(profile_data)
+                if self.ota == "airbnb" and not navigated and not mmt_basic:
+                    mmt_basic = self._fill_airbnb_price(profile_data)
+
                 # 0d) KYP / 'Partner verification' — Booking-specific deterministic fill.
                 kyp_page = is_booking and ("know-your-partner" in url.lower()
                                            or "partner verification" in body)
                 if kyp_page:
                     self._fill_kyp(profile_data)
 
-                # 0c) PHOTOS — upload from JSON on ANY OTA (file inputs are universal).
+                # 0c) PHOTOS — upload the property's images.
                 if self._photo_paths:
-                    if self._photos_file_input() is not None:
+                    if self.ota == "agoda":
+                        # Agoda = one dropzone per section (property + each room); feed each
+                        # a small batch so the ≥3 property gate clears and rooms get photos.
+                        on_photos = "/photos" in (self.rt.page.url or "")
+                        if on_photos and self._fill_agoda_photos():
+                            self._photo_paths = []    # fed every dropzone once
+                    elif self._photos_file_input() is not None:
                         self._upload_photos_chunked()  # batches of 20 for MMT, all-at-once else
                         self._photo_paths = []        # upload once
 
@@ -3965,13 +4942,15 @@ class LiveSession:
                         and (same_page_seen == 0 or made_progress_prev
                              or same_page_seen <= RETRY_PASSES):
                     stored = self._lookup_map(mkey) if (not in_unit and same_page_seen == 0) else None
-                    if stored is not None:
+                    if stored:                        # only replay a NON-EMPTY learned map
                         # replay what we learned before — plain Playwright, no LLM call.
-                        # (cache → file lookup; only reaches here on a hit in either tier)
                         did_c, navigated = self._apply_stored(stored)
                         self._say(f"  ✓ replayed learned map — {did_c} field(s), no LLM "
                                   f"({len(stored)} stored)")
                         self._last_progress = did_c > 0 or navigated
+                    # An EMPTY learned map ([]) means this page can't be cached — card-select
+                    # pages like the property-type chooser store 0 fields. Don't waste the pass
+                    # replaying nothing; run the LLM NOW (same pass) so it advances first try.
                     elif use_llm:
                         try:
                             fields = llm_fill.scrape_fields(self.rt.page)

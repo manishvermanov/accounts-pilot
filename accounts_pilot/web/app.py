@@ -470,6 +470,41 @@ def fill_stop(ota: str = "booking_com"):
     return s.status()
 
 
+@app.get("/api/ping")
+def ping():
+    """Liveness check — the Restart button polls this until the server is back up."""
+    return {"ok": True}
+
+
+@app.post("/api/restart")
+def restart_server():
+    """Restart the dev server RELIABLY. Touching a --reload watched file is too fragile (if
+    the reload watcher hiccups the server just dies and never comes back). Instead we spawn a
+    fully DETACHED helper process that — after this response is sent — kills the current
+    server and starts a fresh one. The helper outlives the server, so it always comes back.
+    The UI then polls /api/ping until the new worker answers."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]                 # repo root (has .venv/)
+    venv_py = root / ".venv" / "Scripts" / "python.exe"
+    py = str(venv_py) if venv_py.exists() else sys.executable
+    helper = root / "scripts" / "_ap_restart.py"
+    try:
+        kwargs = dict(cwd=str(root), stdin=subprocess.DEVNULL,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if os.name == "nt":
+            kwargs["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | NEW_PROCESS_GROUP
+            kwargs["close_fds"] = True
+        else:
+            kwargs["start_new_session"] = True
+        subprocess.Popen([py, str(helper)], **kwargs)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ---- static SPA -----------------------------------------------------------
 @app.get("/")
 def index():

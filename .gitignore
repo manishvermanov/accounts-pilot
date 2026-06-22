@@ -51,3 +51,6 @@ r.txt
 result.txt
 test_out.txt
 wtest.txt
+
+# runtime-only file the Restart button touches to trigger a uvicorn --reload restart
+accounts_pilot/_restart_trigger.py

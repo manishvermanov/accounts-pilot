@@ -16,8 +16,10 @@ from accounts_pilot.models.job import GateKind
 from accounts_pilot.models.property_profile import PropertyProfile
 from accounts_pilot.runtime.browser import BrowserRuntime
 
-# Airbnb "become a host" self-onboarding entry point.
-CONNECT_URL = "https://www.airbnb.com/host/homes"
+# Airbnb "become a host" self-onboarding entry point. India login that redirects
+# into the host wizard after the operator signs in (Airbnb login is phone/email + OTP
+# and heavily bot-protected, so the operator completes it; we then drive /become-a-host).
+CONNECT_URL = "https://www.airbnb.co.in/login?redirect_url=%2Fbecome-a-host"
 
 
 class AirbnbAdapter(OTAAdapter):

@@ -1,4 +1,8 @@
 """Photo upload: find the (possibly hidden) file input and set_input_files from JSON."""
+import os
+
+from PIL import Image
+
 from accounts_pilot.web.live import LiveSession
 from tests.conftest import FakeLocator, FakePage, FakeRuntime
 
@@ -22,11 +26,13 @@ def test_upload_photos_only_existing_files(tmp_path):
     live = LiveSession()
     live.rt = FakeRuntime(FakePage(PAGE))
     real = tmp_path / "exterior.jpg"
-    real.write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\xff\xd9")   # minimal jpeg bytes
+    Image.new("RGB", (1200, 900), (30, 80, 160)).save(str(real), "JPEG", quality=90)
     inp = FakeLocator(count=1)
     ok = live._upload_photos(inp, [str(real), str(tmp_path / "missing.jpg")])
     assert ok is True
-    assert inp.uploaded == [str(real)]                          # missing one filtered out
+    # the missing file is dropped; the real one is uploaded as a prepared (landscape/sized) JPEG
+    assert inp.uploaded is not None and len(inp.uploaded) == 1
+    assert os.path.exists(inp.uploaded[0]) and inp.uploaded[0].lower().endswith(".jpg")
 
 
 def test_upload_photos_none_on_disk():

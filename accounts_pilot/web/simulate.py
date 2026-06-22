@@ -112,12 +112,53 @@ def _rooms_page(prof: dict) -> str:
     )
 
 
+# --------------------------------------------------------------------------- #
+# Airbnb synthetic pages — the input/select-bearing steps (the click-only steps,
+# structure / privacy-type / floor-plan / amenities, are exercised on the live DOM).
+# --------------------------------------------------------------------------- #
+def _airbnb_loc_page(prof: dict) -> str:
+    a = prof.get("address", {}) or {}
+    country_opts = ("<option value=''>Select</option><option value='IN'>India</option>"
+                    "<option value='US'>United States</option>"
+                    "<option value='GB'>United Kingdom</option>")
+    return (
+        "<h1>Where's your place located?</h1>"
+        f"<label>Country/Region<select name='country'>{country_opts}</select></label>"
+        "<label>Street address<input name='addressLine1' aria-label='Street address'></label>"
+        "<label>Apt<input name='addressLine2' aria-label='Apt, suite (optional)'></label>"
+        "<label>City<input name='city' aria-label='City'></label>"
+        "<label>State<input name='state' aria-label='State / territory'></label>"
+        "<label>ZIP code<input name='zipcode' aria-label='ZIP code'></label>"
+    )
+
+
+def _airbnb_title_page(prof: dict) -> str:
+    return ("<h1>Now, let's give your place a title</h1>"
+            "<textarea name='title' aria-label='Title'></textarea>")
+
+
+def _airbnb_desc_page(prof: dict) -> str:
+    return ("<h1>Create your description</h1>"
+            "<textarea name='description' aria-label='Description'></textarea>")
+
+
+def _airbnb_price_page(prof: dict) -> str:
+    return ("<h1>Now, set your price</h1>"
+            "<input id='price' name='price' inputmode='numeric' aria-label='Base price'>")
+
+
 # ota -> [(step label, page builder, handler method name)]
 _FLOWS: "dict[str, list[tuple[str, Callable[[dict], str], str]]]" = {
     "expedia": [
         ("Location", _loc_page, "_fill_expedia_location"),
         ("Check-in / Check-out times", _times_page, "_fill_expedia_times"),
         ("Rooms", _rooms_page, "_fill_expedia_rooms"),
+    ],
+    "airbnb": [
+        ("Location", _airbnb_loc_page, "_fill_airbnb_location"),
+        ("Title", _airbnb_title_page, "_fill_airbnb_title"),
+        ("Description", _airbnb_desc_page, "_fill_airbnb_description"),
+        ("Price", _airbnb_price_page, "_fill_airbnb_price"),
     ],
 }
 

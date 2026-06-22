@@ -266,9 +266,27 @@
     </div>
     <div class="brand-name">Accounts&nbsp;Pilot</div>
     <div class="spacer"></div>
+    <button class="restart-btn" id="restart-btn" onclick="restartServer()" title="Restart the local server (reloads code + clears the live browser session)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v4h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Restart server</span>
+    </button>
     <div class="chip" id="stat-chip"><span class="pip"></span><b id="stat-conn">0</b>&nbsp;connected · <b id="stat-fill">0</b>&nbsp;filling</div>
   </div>
 </div>
+<div id="restart-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(15,18,32,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font:500 15px system-ui,sans-serif">
+  <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:apspin 0.8s linear infinite"></div>
+  <div id="restart-msg">Restarting server…</div>
+</div>
+<style>
+@keyframes apspin{to{transform:rotate(360deg)}}
+.restart-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:9px;
+  border:1px solid #c7d2fe;background:#eef2ff;color:#4f46e5;
+  font:600 12.5px system-ui,sans-serif;cursor:pointer;transition:background .15s,opacity .15s}
+.restart-btn:hover{background:#e0e7ff}
+.restart-btn:active{transform:translateY(1px)}
+.restart-btn[disabled]{opacity:.5;cursor:default}
+.restart-btn svg{flex:none}
+</style>
 
 <div class="app">
   <!-- control panel -->
@@ -418,6 +436,34 @@
 <script>
 const api=(u,o)=>fetch(u,o).then(async r=>{ if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||r.status); return r.json(); });
 const polls={}; const LAST={};
+
+// Restart the local server (uvicorn --reload respawns a fresh worker), then wait for it
+// to come back and reload the page — so the operator never has to restart it by hand.
+async function restartServer(){
+  const btn=document.getElementById('restart-btn');
+  const ov=document.getElementById('restart-overlay'), msg=document.getElementById('restart-msg');
+  // guard: a server restart kills any in-progress fill — warn before dropping a live run
+  let filling=0;
+  try{ filling=parseInt((document.getElementById('stat-fill')||{}).textContent||'0',10)||0; }catch(e){}
+  if(filling>0 && !confirm('⚠ A fill is in progress on '+filling+' channel'+(filling>1?'s':'')+'.\n\n'
+      +'Restarting the server will STOP it. Restart anyway?')) return;
+  if(btn) btn.disabled=true;
+  if(ov) ov.style.display='flex';
+  try{ await fetch('/api/restart',{method:'POST'}); }catch(e){}   // the reload may kill the response — fine
+  // give uvicorn a moment to drop the old worker, then poll /api/ping until the new one answers
+  let back=false;
+  for(let i=0;i<60 && !back;i++){
+    await new Promise(r=>setTimeout(r, 700));
+    try{
+      const r=await fetch('/api/ping',{cache:'no-store'});
+      if(r.ok){ back=true; break; }
+    }catch(e){ /* still restarting */ }
+    if(msg && i>3) msg.textContent='Restarting server… (still coming up)';
+  }
+  if(msg) msg.textContent = back ? 'Back up — reloading…' : 'Server didn’t come back — reload manually.';
+  if(back){ setTimeout(()=>location.reload(), 500); }
+  else if(btn){ btn.disabled=false; setTimeout(()=>{ if(ov) ov.style.display='none'; }, 2500); }
+}
 
 const BRAND={
   booking_com:{c:'#003b95'}, makemytrip:{c:'#e0530d'}, agoda:{c:'#2f6df6'},

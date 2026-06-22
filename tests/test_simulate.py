@@ -20,11 +20,11 @@ def test_invalid_json_fails_validation_without_browser():
 
 
 def test_unsupported_ota_validates_and_reports_coverage_only():
-    r = simulate("airbnb", demo_profile_dict())
+    r = simulate("makemytrip", demo_profile_dict())
     assert r["ok"] is True and r["validation"]["ok"] is True
-    assert r["steps"] == []                       # no offline handler flow for airbnb
+    assert r["steps"] == []                       # no offline handler flow for makemytrip
     assert r["coverage"]["rooms"] >= 1
-    assert any("airbnb" in n for n in r["notes"])  # honest note about validate-only
+    assert any("makemytrip" in n for n in r["notes"])  # honest note about validate-only
 
 
 def test_coverage_flags_missing_fields_and_photos():
@@ -49,6 +49,21 @@ def test_expedia_offline_sim_fills_real_dom():
     fields = {f["field"]: f["value"] for s in r["steps"] for f in s["filled"]}
     assert "City" in fields and fields["City"]      # address autocomplete / structured fill
     assert r["filled_total"] >= 5                   # location + times + rooms all contributed
+
+
+def test_airbnb_offline_sim_fills_real_dom():
+    """Full path: launches headless Chromium, drives the Airbnb handlers against the
+    synthetic location/title/description/price pages, and confirms real fills came back."""
+    try:
+        r = simulate("airbnb", demo_profile_dict())
+    except Exception as e:                         # no browser in this env → skip, don't fail
+        pytest.skip(f"headless browser unavailable: {e}")
+    assert r["ok"] is True
+    steps = {s["step"]: s for s in r["steps"]}
+    assert "Location" in steps and "Price" in steps
+    fields = {f["field"]: f["value"] for s in r["steps"] for f in s["filled"]}
+    assert any("street" in k.lower() or "address" in k.lower() for k in fields)
+    assert r["filled_total"] >= 4                  # location + title + description + price
 
 
 def test_simulate_all_runs_globally():
