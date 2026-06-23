@@ -32,6 +32,18 @@ def test_load_missing_returns_empty(tmp_data_dir):
     assert LiveSession()._load_page_maps() == {}
 
 
+def test_commit_pending_persists_even_in_autopilot(tmp_data_dir):
+    """A solved page must be saved to the static map file in EVERY mode (incl. autopilot),
+    so the next run replays it with no LLM and the flow doesn't re-decide / fail partway."""
+    live = LiveSession("expedia")
+    live._autopilot_active = True                       # the mode that used to skip saving
+    key = "EXPEDIA::/onboarding/x::Heading"
+    entries = [{"by": "css", "locator": "#currency", "action": "select", "value": "INR"}]
+    live._commit_pending((key, entries))
+    assert live._pmap_path.exists()                     # written to page_maps_expedia.json
+    assert live._lookup_map(key) == entries             # and replayable next run (no LLM)
+
+
 def test_stable_descriptor_keeps_automation_id():
     live = LiveSession()
     live.rt = FakeRuntime(_PageWith({

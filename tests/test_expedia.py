@@ -89,22 +89,12 @@ def test_classification_defers_when_absent():
 
 
 # --------------------------------------------------------------------------- #
-# optional 'import from Booking.com URL' — we SKIP it (Next, never Add)
+# Step-2 'property-info' (name/type/#rooms/currency/radios) — Booking box ignored
 # --------------------------------------------------------------------------- #
-def test_skip_booking_import_clicks_next():
-    nextbtn = FakeLocator(count=1, tag="button", label="Next")
-    page = FakePage([{"url": "http://x/list", "heading": "h",
-                      "body": "Use your Booking.com URL to list your property faster"}],
-                    locators={"role:button": nextbtn})
-    s = _expedia(page)
-    assert s._skip_expedia_booking_import({}) is True
-    assert nextbtn.clicked
-
-
-def test_skip_booking_import_defers_elsewhere():
+def test_property_info_defers_when_absent():
     page = FakePage([{"url": "http://x/other", "heading": "h", "body": "a normal page"}])
     s = _expedia(page)
-    assert s._skip_expedia_booking_import({}) is False
+    assert s._fill_expedia_property_info({"display_name": "X"}) is False
 
 
 # --------------------------------------------------------------------------- #

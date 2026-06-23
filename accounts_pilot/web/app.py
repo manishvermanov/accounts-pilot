@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -468,6 +468,44 @@ def fill_stop(ota: str = "booking_com"):
     s = get_session(ota)
     s.stop()
     return s.status()
+
+
+@app.get("/api/connect/screenshot")
+def connect_screenshot(ota: str = "booking_com"):
+    """Latest JPEG of the live OTA page — the in-app remote panel polls this while the bot is
+    paused at a gate, so the operator can see the page without the separate browser window."""
+    from accounts_pilot.web.live import get_session
+    shot = get_session(ota).screenshot_bytes()
+    if not shot:
+        return Response(status_code=204)
+    return Response(content=shot, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+class RemoteReq(BaseModel):
+    action: str            # click | type | key | scroll | fill_field | submit
+    x: float = 0           # click: 0..1 ratio of the page width
+    y: float = 0           # click: 0..1 ratio of the page height
+    text: str = ""         # type / fill_field: text to type
+    key: str = ""          # key: e.g. Enter, Tab, Backspace
+    dy: float = 0          # scroll: wheel delta
+    id: int = -1           # fill_field: which detected field (its data-ap-rf index)
+
+
+@app.post("/api/connect/remote")
+def connect_remote(req: RemoteReq, ota: str = "booking_com"):
+    """Relay an operator action (click/type/key/fill_field/submit) from the in-app remote
+    panel onto the live OTA page. Applied while the bot is paused at a gate."""
+    from accounts_pilot.web.live import get_session
+    get_session(ota).remote_action(req.model_dump())
+    return {"ok": True}
+
+
+@app.get("/api/connect/fields")
+def connect_fields(ota: str = "booking_com"):
+    """Input fields detected on the paused OTA page — the remote panel renders these as a
+    labeled form so the operator fills creds/OTP WITHOUT clicking the screenshot (Lambda-safe)."""
+    from accounts_pilot.web.live import get_session
+    return {"fields": get_session(ota).fields()}
 
 
 @app.get("/api/ping")

@@ -72,6 +72,10 @@ class LiveSession:
         self._otp_value = ""
         self._stop = threading.Event()                 # operator Kill — halts a running fill
         self._cmd: "queue.Queue[tuple]" = queue.Queue()
+        self._remote: "queue.Queue[dict]" = queue.Queue()   # operator actions relayed onto the OTA page at a gate
+        self._last_shot: bytes = b""                        # latest JPEG of the OTA page (for the in-app remote view)
+        self._fields: list = []                             # detected input fields on the paused page (labeled form, no clicking)
+        self._gate_prompt: str = ""                         # short human label for the current gate (Remote-panel title)
 
     def _say(self, m: str):
         self.log.append(m)
@@ -119,6 +123,134 @@ class LiveSession:
     def submit_otp(self, code: str):
         self._otp_value = code
         self._otp.set()
+
+    # ---- remote control: drive the OTA page from the dashboard while paused ----
+    def remote_action(self, cmd: dict):
+        """Queue an operator action (from the in-app remote panel) to relay onto the live OTA
+        page. Only applied while the bot is paused at a gate (login / CAPTCHA / OTP / map /
+        bank), where the session thread is free to service it."""
+        self._remote.put(dict(cmd or {}))
+
+    def screenshot_bytes(self) -> bytes:
+        """Latest JPEG of the OTA page (captured while paused at a gate)."""
+        return self._last_shot
+
+    def fields(self) -> list:
+        """Detected fillable input fields on the paused page (for the labeled remote form)."""
+        return self._fields
+
+    _SCRAPE_FIELDS_JS = r"""() => {
+      const vis=n=>{const r=n.getBoundingClientRect();return r.width>4&&r.height>4&&getComputedStyle(n).visibility!=='hidden';};
+      document.querySelectorAll('[data-ap-rf]').forEach(e=>e.removeAttribute('data-ap-rf'));
+      const out=[]; let i=0;
+      document.querySelectorAll('input,select,textarea').forEach(n=>{
+        if(!vis(n))return;
+        const t=(n.type||n.tagName||'').toLowerCase();
+        if(['hidden','submit','button','checkbox','radio','file','image','range','color'].includes(t))return;
+        let label=n.getAttribute('aria-label')||'';
+        if(!label && n.id){ const l=document.querySelector('label[for="'+(window.CSS&&CSS.escape?CSS.escape(n.id):n.id)+'"]'); if(l)label=l.innerText; }
+        if(!label){ const l=n.closest('label'); if(l)label=l.innerText; }
+        if(!label) label=n.placeholder||n.name||(t==='password'?'Password':(t==='email'?'Email':'Field'));
+        label=(label||'').replace(/\s+/g,' ').trim().slice(0,48);
+        n.setAttribute('data-ap-rf', String(i));
+        out.push({id:i, label, type:(t==='select'?'select':t), value:(t==='password'?'':(n.value||''))});
+        i++;
+      });
+      return out;
+    }"""
+
+    def _apply_remote(self, cmd: dict):
+        """Relay ONE operator action to the OTA page. Runs on the session thread (Playwright
+        is thread-affine). click coords arrive as 0..1 ratios of the viewport."""
+        page = self.rt.page
+        action = (cmd.get("action") or "").lower()
+        if action == "click":
+            vp = page.viewport_size or {"width": 1280, "height": 800}
+            x = max(0.0, min(1.0, float(cmd.get("x", 0)))) * vp["width"]
+            y = max(0.0, min(1.0, float(cmd.get("y", 0)))) * vp["height"]
+            page.mouse.click(x, y)
+        elif action == "type":
+            page.keyboard.type(str(cmd.get("text", "")), delay=25)
+        elif action == "key":
+            page.keyboard.press(str(cmd.get("key") or "Enter"))
+        elif action == "scroll":
+            page.mouse.wheel(0, float(cmd.get("dy", 0)))
+        elif action == "fill_field":
+            # fill a detected field BY its tagged selector — no click/coords (Lambda-safe).
+            # Use REAL keystrokes (click → clear → type): React/controlled inputs (Airbnb,
+            # Expedia) only fire onChange and enable the submit button on real key events.
+            el = page.locator(f'[data-ap-rf="{cmd.get("id")}"]').first
+            val = str(cmd.get("text", cmd.get("value", "")))
+            try:
+                el.scroll_into_view_if_needed(timeout=2000)
+            except Exception:
+                pass
+            try:
+                el.click(timeout=3000)
+                try:
+                    el.fill("")                          # focus + clear any existing text
+                except Exception:
+                    pass
+                page.keyboard.type(val, delay=35)        # per-keystroke → React registers it
+                self._say(f"  · remote: filled field {cmd.get('id')}")
+            except Exception as e:
+                try:
+                    el.fill(val); self._say(f"  · remote: set field {cmd.get('id')}")
+                except Exception:
+                    self._say(f"  · remote: couldn't fill field {cmd.get('id')} ({type(e).__name__})")
+        elif action == "submit":
+            import time as _t
+            _t.sleep(0.5)                                # let validation settle so the button enables
+            done = False
+            for sel in ("button[type=submit]", "[data-testid*='submit']",
+                        "button:has-text('Continue')", "button:has-text('Sign in')",
+                        "button:has-text('Log in')", "button:has-text('Next')",
+                        "button:has-text('Submit')", "button:has-text('Verify')"):
+                try:
+                    b = page.locator(sel).first
+                    if b.count() and b.is_visible() and b.is_enabled():
+                        b.click(timeout=3000); done = True
+                        self._say("  · remote: clicked the page's submit button")
+                        break
+                except Exception:
+                    continue
+            if not done:
+                try:
+                    page.keyboard.press("Enter"); self._say("  · remote: pressed Enter to submit")
+                except Exception:
+                    self._say("  · remote: no submit button found")
+
+    def _wait_at_gate(self, prompt: str = ""):
+        """Pause at an operator gate — but instead of a dead block, SERVICE remote-control
+        actions so the operator can drive the OTA page from the Accounts Pilot screen
+        (click/type/key) and keep a live screenshot flowing to the dashboard, until they
+        click Done (sets _captcha). `prompt` is a short human label shown as the Remote-panel
+        title (e.g. 'Sign in', 'Confirm your address') so it's never mislabeled. The headed
+        browser window still works in parallel. Caller clears _captcha afterwards."""
+        import time
+        self._gate_prompt = prompt or "Action needed"
+        while not self._captcha.is_set():
+            applied = False
+            while True:                                # drain any queued operator actions
+                try:
+                    cmd = self._remote.get_nowait()
+                except queue.Empty:
+                    break
+                applied = True
+                try:
+                    self._apply_remote(cmd)
+                except Exception as e:
+                    self._say(f"  · remote: {type(e).__name__}")
+            try:                                       # refresh the in-app view of the page
+                self._last_shot = self.rt.page.screenshot(type="jpeg", quality=62)
+            except Exception:
+                pass
+            try:                                       # detect the page's input fields (labeled form)
+                self._fields = self.rt.page.evaluate(self._SCRAPE_FIELDS_JS) or []
+            except Exception:
+                pass
+            time.sleep(0.15 if applied else 0.5)
+        self._gate_prompt = ""                          # gate cleared
 
     def fill(self, profile_data: dict):
         self._cmd.put(("fill", profile_data))
@@ -184,7 +316,29 @@ class LiveSession:
             self._say(f"Record error: {type(e).__name__}: {e}")
 
     def status(self) -> dict:
-        return {"ota": self.ota, "state": self.state, "log": self.log[-30:], "error": self.error}
+        paused = self.state in ("awaiting_captcha", "awaiting_otp")
+        return {"ota": self.ota, "state": self.state, "log": self.log[-30:], "error": self.error,
+                "paused": paused, "shot": bool(self._last_shot), "gate_prompt": self._gate_prompt}
+
+    def _looks_like_login(self) -> bool:
+        """Are we sitting on an OTA sign-in page (manual credentials needed)? A VISIBLE
+        password field is the strong signal; URL / body phrasing back it up."""
+        try:
+            page = self.rt.page
+            url = (page.url or "").lower()
+            if any(k in url for k in ("login", "signin", "sign-in", "/auth")):
+                return True
+            pw = page.locator("input[type=password]")
+            if pw.count() > 0 and pw.first.is_visible():
+                return True
+            body = (page.inner_text("body") or "").lower()[:3000]
+            if "enter your password" in body or "username or email" in body:
+                return True
+            if "password" in body and ("sign in" in body or "log in" in body):
+                return True
+        except Exception:
+            pass
+        return False
 
     # ---- worker thread (owns the browser) --------------------------------
     def _run(self, ota: str):
@@ -200,7 +354,7 @@ class LiveSession:
                 if result == "captcha":
                     self.state = "awaiting_captcha"
                     self._say("Solve the CAPTCHA in the browser window, then click Done.")
-                    self._captcha.wait(); self._captcha.clear()
+                    self._wait_at_gate(); self._captcha.clear()
                     self.rt.try_advance()
                 elif result == "verification":
                     self.state = "awaiting_otp"
@@ -216,6 +370,19 @@ class LiveSession:
                 self.rt.think()
                 nxt = self.rt.detect_challenge()
                 result = nxt if nxt else "ok"
+
+            # If we landed on a LOGIN page (manual credentials needed — Airbnb/Expedia/etc.),
+            # pause at a gate NOW so the operator can sign in from the dashboard via Remote
+            # control (or the browser window), instead of silently going "connected". Re-check
+            # after each Done; proceed only once we're past login.
+            for _ in range(4):
+                if not self._looks_like_login():
+                    break
+                self.state = "awaiting_captcha"
+                self._say("⏸ This is the LOGIN page — enter your email / password / OTP via "
+                          "🖥 Remote control (or the browser window), then click Done.")
+                self._wait_at_gate(f"Sign in to {getattr(adapter, 'display_name', ota)}"); self._captcha.clear()
+                self.rt.think()
 
             self.state = "connected"
             self._say("Connected ✓ — logged in. Navigate to a form page, then click Fill.")
@@ -431,17 +598,23 @@ class LiveSession:
             pass
 
     def _commit_pending(self, pending) -> None:
-        """Persist a just-learned page map to cache+file — called ONLY after the page
-        advanced, so we never store a mapping that didn't actually move the wizard forward.
-        Skipped in autopilot mode so dummy values never poison the durable maps file."""
+        """Persist a just-learned page map to cache + the static page_maps_<ota>.json — called
+        ONLY after the page advanced, so we only ever store a mapping that actually moved the
+        wizard forward. Persisted for EVERY OTA and in EVERY mode (including autopilot) so a
+        solved page replays next run with NO LLM, and a long flow doesn't fail partway by
+        re-deciding. If a stored map ever goes stale (the page changed), replay degrades
+        gracefully and the next pass falls back to the LLM — it never hard-fails.
+
+        Note: in autopilot the stored values can include invented dummies. To keep exact
+        values, seed the cache from a real-data (non-autopilot) run, or delete the OTA's
+        page_maps_<ota>.json to relearn."""
         if not pending:
-            return
-        if getattr(self, "_autopilot_active", False):
             return
         mkey, entries = pending
         try:
             self._store_map(mkey, entries)
-            self._say(f"  · learned this page → stored {len(entries)} field(s) (next run: no LLM here)")
+            self._say(f"  · learned this page → stored {len(entries)} field(s) "
+                      f"in page_maps_{self.ota}.json (next run: no LLM here)")
         except Exception as e:
             self._say(f"  · couldn't save learned map: {type(e).__name__}: {e}")
 
@@ -2602,46 +2775,113 @@ class LiveSession:
             pass
         return False
 
-    def _skip_expedia_booking_import(self, profile_data) -> bool:
-        """Expedia optional 'Use your Booking.com URL to list your property faster' step. We do
-        NOT import from Booking — clear any URL the autopilot/LLM may have typed and click
-        'Next' (NOT 'Add', which would pull in the Booking listing). Navigates."""
+    # property_type → Expedia '#property-type' option label
+    _EXPEDIA_PTYPE = {
+        "hotel": "Hotel", "apartment": "Apartment", "aparthotel": "Apart-hotel",
+        "guesthouse": "Guest house", "homestay": "Homestay", "bnb": "Bed and breakfast",
+        "hostel": "Hostel", "resort": "Resort", "villa": "Villa", "holiday_home": "Vacation home",
+    }
+
+    def _click_radio_index(self, page, idx: int) -> None:
+        """Click the idx-th radio on the page even when it's a styled (hidden) FDS radio —
+        click its label, force checked, and fire click/change so React registers it."""
+        try:
+            page.evaluate(
+                "(i)=>{ const r=document.querySelectorAll('input[type=radio]')[i]; if(!r) return;"
+                " const lab=r.closest('label')||r; lab.click(); r.checked=true;"
+                " r.dispatchEvent(new Event('click',{bubbles:true}));"
+                " r.dispatchEvent(new Event('change',{bubbles:true})); }", idx)
+        except Exception:
+            pass
+
+    def _fill_expedia_property_info(self, profile_data) -> bool:
+        """Expedia Step-2 '…/list/property-info' — Property name, type, #rooms, currency + two
+        radio questions (channel manager → No; chain → Yes if chain_name else No). The 'Use your
+        Booking.com URL' box is EMBEDDED here and we IGNORE it (never click its Add). Fully
+        deterministic — NO LLM — so this page resolves the same way every run. Dismisses the
+        OneTrust cookie banner first (it overlays and blocks the Next click), then clicks the
+        page's own #propertyInfoNextBtn. Blocks the LLM."""
         page = self.rt.page
         try:
-            body = (page.inner_text("body") or "").lower()
+            is_pi = ("property-info" in (page.url or "").lower()
+                     or page.locator("#latin-property-name-input, #propertyInfoNextBtn").count() > 0)
         except Exception:
+            is_pi = False
+        if not is_pi:
             return False
-        if "booking.com" not in body or not any(
-                m in body for m in ("list your property faster", "bring over property details",
-                                    "link your booking.com")):
-            return False
-        # 1) clear any Booking.com URL the bot typed — we are NOT importing.
+
+        # 0) dismiss the OneTrust cookie banner if present (it can block the Next click).
         try:
-            for sel in ("input[placeholder*='booking.com' i]", "input[value*='booking.com' i]",
-                        "input[type='url']", "input[type='text']"):
-                el = self._find_visible(page, sel)
-                if el is not None:
-                    try:
-                        if (el.input_value() or "").strip():
-                            el.fill("")
-                    except Exception:
-                        pass
+            for sel in ("#onetrust-accept-btn-handler", "#onetrust-reject-all-handler"):
+                cb = page.locator(sel).first
+                if cb.count() and cb.is_visible():
+                    self._click_robust(cb)
+                    self.rt.think(0.4, 0.8)
                     break
         except Exception:
             pass
-        # 2) click 'Next' to SKIP (not 'Add').
+
+        did = 0
+        # 1) Property name
         try:
-            btn = page.get_by_role("button", name="Next", exact=True).first
-            if btn.count() == 0:
-                btn = page.locator("button:has-text('Next')").first
-            if btn.count() and btn.is_visible():
-                self._click_robust(btn)
-                self._say("  · Expedia → skipped Booking.com import (Next, no URL)")
+            el = page.locator("#latin-property-name-input").first
+            name = profile_data.get("display_name") or ""
+            if el.count() and name and (el.input_value() or "").strip() != name:
+                if self._set_react_input(el, name):
+                    did += 1
+        except Exception:
+            pass
+        # 2) Property type (select)
+        try:
+            ts = page.locator("#property-type").first
+            if ts.count() and not (ts.input_value() or "").strip():
+                want = self._EXPEDIA_PTYPE.get(str(profile_data.get("property_type", "hotel")).lower(), "Hotel")
+                if self._set_react_select(ts, want):
+                    did += 1
+        except Exception:
+            pass
+        # 3) Number of rooms/units
+        try:
+            rel = page.locator("#num-of-rooms-input").first
+            nrooms = sum(int(rt.get("count", 1) or 1) for rt in (profile_data.get("room_types") or [])) or 1
+            if rel.count() and not (rel.input_value() or "").strip():
+                if self._set_react_input(rel, str(nrooms)):
+                    did += 1
+        except Exception:
+            pass
+        # 4) Currency
+        try:
+            cs = page.locator("#currency").first
+            cur = profile_data.get("currency") or "INR"
+            if cs.count() and not (cs.input_value() or "").strip():
+                if self._set_react_select(cs, cur):
+                    did += 1
+        except Exception:
+            pass
+        # 5) Radios (document order: CM-Yes, CM-No, Chain-Yes, Chain-No)
+        try:
+            chain = bool(profile_data.get("chain_name"))
+            if page.locator("input[type=radio]").count() >= 4:
+                self._click_radio_index(page, 1)                 # channel manager → No
+                self.rt.think(0.2, 0.4)
+                self._click_radio_index(page, 2 if chain else 3)  # chain → Yes / No
+                did += 1
+        except Exception:
+            pass
+
+        if did:
+            self._say(f"  ✓ Expedia property-info ({did} field(s); Booking.com import ignored)")
+        # 6) advance via the page's OWN Next (never the booking 'Add'/competitor button).
+        try:
+            nb = page.locator("#propertyInfoNextBtn").first
+            if nb.count() and nb.is_visible():
+                self._click_robust(nb)
+                self._say("  · Expedia property-info → Next")
                 self.rt.think(1.0, 1.6)
                 return True
         except Exception:
             pass
-        return False
+        return did > 0
 
     def _fill_expedia_typeahead(self, profile_data) -> bool:
         """Expedia Step-1 location TYPEAHEAD (…/list/location, #locationTypeAhead) — a single
@@ -3196,6 +3436,34 @@ class LiveSession:
             return True
         return False
 
+    def _pick_address_suggestion(self, city: str = "") -> bool:
+        """Pick a row from an address-autocomplete dropdown (Google Places style). Prefer a
+        suggestion that mentions the city; else the first. Keyboard fallback if the list
+        markup is opaque. Used by Airbnb's address page (and any typeahead address box)."""
+        page = self.rt.page
+        for sel in ("[role='option']", "ul[role='listbox'] li", "[id*='option']",
+                    "[id*='suggestion']", "[data-testid*='suggestion']", "[class*='uggestion']", ".pac-item"):
+            try:
+                o = page.locator(sel)
+                n = o.count()
+                if not n:
+                    continue
+                target = None
+                if city:
+                    for i in range(min(n, 8)):
+                        if city.lower() in ((o.nth(i).inner_text() or "").lower()):
+                            target = o.nth(i); break
+                target = target or o.first
+                if target.is_visible():
+                    self._click_robust(target); return True
+            except Exception:
+                continue
+        try:                                            # opaque list → arrow down + enter
+            page.keyboard.press("ArrowDown"); self.rt.think(0.3, 0.5); page.keyboard.press("Enter")
+            return True
+        except Exception:
+            return False
+
     def _fill_airbnb_location(self, profile_data) -> bool:
         """Airbnb 'Where's your place located?' — a map search box with an 'Enter address
         manually' reveal. The address is every OTA's LLM blind spot: pick Country/region
@@ -3217,6 +3485,66 @@ class LiveSession:
             has_addr_input = False
         if not (any(m in body for m in markers) or "/location" in url or has_addr_input):
             return False
+
+        # Address-confirm popup: after Next, Airbnb asks "Is your address correct?" with
+        # Edit / "Yes, it's correct". Click the confirm so the wizard moves on.
+        try:
+            if "is your address correct" in body or "address correct?" in body:
+                for sel in ('button:has-text("Yes, it\'s correct")', "button:has-text(\"Yes, it\")",
+                            "button:has-text('correct')", "button:has-text('Yes')"):
+                    b = page.locator(sel).first
+                    if b.count() and b.is_visible():
+                        self._click_robust(b)
+                        self._say("  · Airbnb → confirmed address (Yes, it's correct)")
+                        self.rt.think(0.8, 1.2)
+                        return True
+        except Exception:
+            pass
+
+        # A0) Google-style address AUTOCOMPLETE. Airbnb has TWO same-labelled boxes:
+        #     #address-search-input on the page only OPENS the modal; the REAL typeahead is
+        #     #searchable-address-search INSIDE the modal (it drives the suggestion dropdown,
+        #     and this page has NO Continue — picking a suggestion is what advances it).
+        try:
+            modal = page.locator("#searchable-address-search")
+            if modal.count() == 0 or not modal.first.is_visible():
+                opener = page.locator("#address-search-input").first       # open the modal
+                if opener.count() and opener.is_visible():
+                    self._click_robust(opener); self.rt.think(0.7, 1.1)
+                modal = page.locator("#searchable-address-search")
+            box = modal.first
+            if box.count() and box.is_visible():
+                a = profile_data.get("address", {}) or {}
+                ctry = "India" if str(a.get("country", "")).upper() in ("IN", "INDIA") else (a.get("country") or "")
+                query = ", ".join(p for p in (a.get("line1"), a.get("city"), a.get("state"), ctry) if p)
+                if query:
+                    if (box.input_value() or "").strip() != query:        # type once (don't re-type each retry)
+                        self._click_robust(box)
+                        try:
+                            box.fill("")
+                        except Exception:
+                            pass
+                        page.keyboard.type(query, delay=55)
+                    picked = False
+                    for _ in range(14):                                    # poll ~6s for Google's suggestions
+                        self.rt.think(0.35, 0.55)
+                        if page.locator("[role='option'], [id*='suggestion'], .pac-item").count() > 0:
+                            if self._pick_address_suggestion(a.get("city", "")):
+                                picked = True; break
+                    if picked:
+                        self._say(f"  · Airbnb address → ‘{query}’ (picked suggestion)")
+                        self.rt.think(1.2, 1.8)
+                        return True
+                    # didn't auto-resolve → hand THIS page to the operator ONCE (no 5× looping)
+                    if not getattr(self, "_airbnb_addr_assisted", False):
+                        self._airbnb_addr_assisted = True
+                        self.state = "awaiting_captcha"
+                        self._say("⏸ Airbnb address didn't auto-resolve — open 🖥 Remote control, type the "
+                                  "address and CLICK a suggestion from the dropdown, then click Done.")
+                        self._wait_at_gate("Confirm your address"); self._captcha.clear(); self.state = "filling"
+                    return True
+        except Exception:
+            pass
 
         # reveal the manual-entry form if Airbnb is showing only the map search box
         try:
@@ -4288,7 +4616,7 @@ class LiveSession:
         self._captcha.clear()
         self._say("⏸ MAP PIN — Booking needs the location pin set. In the browser window, click "
                   "(or drag) the pin onto the spot, then click Done. One tap and it continues.")
-        self._captcha.wait(); self._captcha.clear()
+        self._wait_at_gate(); self._captcha.clear()
         self.state = "filling"
         ok = self._address_accepted()
         self._say("  ✓ pin placed — continuing" if ok else "  · continuing (pin warning may persist)")
@@ -4533,7 +4861,7 @@ class LiveSession:
             self.state = "awaiting_captcha"; self._captcha.clear()
             self._say("⏸ Click into the address box in the browser window and type one letter so it "
                       "activates, then click Done — I’ll take over.")
-            self._captcha.wait(); self._captcha.clear(); self.state = "filling"
+            self._wait_at_gate(); self._captcha.clear(); self.state = "filling"
             self._ensure_quick_search_tab()
             loc = self._quick_search_box()
             if loc is None:
@@ -4731,20 +5059,22 @@ class LiveSession:
                     body = ""
                 bank_kw = ("bank account number", "iban", "swift code", "bic code", "sort code",
                            "routing number", "how would you like to get paid", "add your bank",
-                           "add a bank account", "your bank account details",
+                           "add a bank account", "your bank account details", "account holder",
+                           "beneficiary name", "ifsc", "ifsc code", "upi id", "micr",
                            "card number", "credit card number", "debit card number")
                 if any(k in body for k in bank_kw) and not self._bank_gate_passed:
                     self.state = "awaiting_captcha"; self._captcha.clear()
-                    self._say("⏸ Reached the BANK/PAYOUT account fields — enter the account number "
-                              "in the window (or skip), then click Done and I'll carry on.")
-                    self._captcha.wait(); self._captcha.clear(); self.state = "filling"
+                    self._say("⏸ Reached the BANK/PAYOUT account fields. For your security I never "
+                              "auto-type account numbers — enter them yourself via 🖥 Remote control "
+                              "(or the browser window), then click Done and I'll carry on.")
+                    self._wait_at_gate("Enter your bank / payout details"); self._captcha.clear(); self.state = "filling"
                     self._bank_gate_passed = True     # don't re-pause on the same page next loop
                     continue
                 # 0b) CAPTCHA mid-flow — hand off, then resume
                 if self.rt.detect_challenge() == "captcha":
                     self.state = "awaiting_captcha"
                     self._say("A CAPTCHA appeared — solve it in the browser window, then click Done.")
-                    self._captcha.wait(); self._captcha.clear()
+                    self._wait_at_gate(); self._captcha.clear()
                     self.state = "filling"
                     continue
 
@@ -4756,7 +5086,7 @@ class LiveSession:
                     self.state = "awaiting_captcha"; self._captcha.clear()
                     self._say("⏸ MMT needs EMAIL + MOBILE verified (OTP). Click each ‘Verify’, "
                               "enter the codes, then click Done and I’ll continue.")
-                    self._captcha.wait(); self._captcha.clear(); self.state = "filling"
+                    self._wait_at_gate(); self._captcha.clear(); self.state = "filling"
                     self._verify_gate_passed = True
                     continue
 
@@ -4774,7 +5104,7 @@ class LiveSession:
                     self.state = "awaiting_captcha"; self._captcha.clear()
                     self._say("⏸ This is the LOGIN page — I won't touch it. Log in (password + OTP) "
                               "in the browser window, open the ‘List/Add a property’ form, then click Done.")
-                    self._captcha.wait(); self._captcha.clear(); self.state = "filling"
+                    self._wait_at_gate(); self._captcha.clear(); self.state = "filling"
                     continue
 
                 # 0a2) TRAINING CAPTURE — for non-Booking OTAs (e.g. MakeMyTrip) we haven't
@@ -4836,9 +5166,10 @@ class LiveSession:
                 #       see; otherwise autopilot loops on the scroll-only CTA). Navigates.
                 if self.ota == "expedia" and self._fill_expedia_classification(profile_data):
                     navigated = True
-                # 0a9e2) EXPEDIA optional 'import from Booking.com URL' — SKIP it (clear any URL,
-                #        click Next, never 'Add'). Navigates.
-                if self.ota == "expedia" and not navigated and self._skip_expedia_booking_import(profile_data):
+                # 0a9e2) EXPEDIA Step-2 'property-info' — name/type/#rooms/currency + channel-manager
+                #        & chain radios; IGNORES the embedded Booking.com import box. Deterministic
+                #        (no LLM), dismisses the cookie banner, clicks its own Next. Navigates.
+                if self.ota == "expedia" and not navigated and self._fill_expedia_property_info(profile_data):
                     navigated = True
                 # 0a9f0) EXPEDIA Step-1 location TYPEAHEAD — type address into #locationTypeAhead,
                 #        pick a suggestion; Next then advances (to manual fallback for dummy data).

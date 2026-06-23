@@ -277,6 +277,48 @@
   <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:apspin 0.8s linear infinite"></div>
   <div id="restart-msg">Restarting server…</div>
 </div>
+<div id="remote-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(15,18,32,.80);backdrop-filter:blur(5px);align-items:flex-start;justify-content:center;overflow:auto;padding:26px 16px">
+  <div style="width:min(600px,96vw);display:flex;flex-direction:column;gap:14px">
+    <!-- sign-in card (the hero) -->
+    <div style="background:#fff;border-radius:16px;box-shadow:0 26px 70px -22px rgba(0,0,0,.55);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:15px 20px;background:linear-gradient(92deg,#4f46e5,#7c3aed);color:#fff">
+        <div style="font:700 16px system-ui">🖐 <span id="remote-title">Action needed</span></div>
+        <span style="flex:1"></span>
+        <button onclick="closeRemote()" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);color:#fff;border-radius:8px;padding:6px 11px;font:600 12px system-ui;cursor:pointer">✕ Close</button>
+      </div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13.5px system-ui;color:#475569;line-height:1.5">Type into the box(es) below, then press <b>Continue</b>. We enter it on the website for you — you don't need to touch anything else. If a code is texted/emailed to you, it'll ask for it next.</div>
+        <div id="remote-fields-list" style="display:flex;flex-direction:column;gap:13px"></div>
+        <div id="remote-fields-empty" style="font:500 13px system-ui;color:#94a3b8;display:none">Loading the page's fields… <button class="btn-sm" onclick="loadFields()">↻ Check again</button></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="remote-continue" onclick="submitFields()" style="background:#4f46e5;border:none;color:#fff;border-radius:10px;padding:12px 22px;font:700 14.5px system-ui;cursor:pointer;box-shadow:0 8px 18px -8px rgba(79,70,229,.6)">Continue ➜</button>
+          <button class="btn-sm" onclick="loadFields()">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid #eef0f5;padding:13px 20px;display:flex;align-items:center;gap:12px;background:#f8fafc;flex-wrap:wrap">
+        <span style="font:600 13px system-ui;color:#475569">Finished signing in?</span>
+        <button onclick="remoteDone()" style="background:#16a34a;border:none;color:#fff;border-radius:10px;padding:9px 18px;font:700 13.5px system-ui;cursor:pointer">✅ Yes — let the bot continue</button>
+      </div>
+    </div>
+    <!-- collapsible live view + advanced -->
+    <details style="background:#0b0e1a;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14)">
+      <summary style="cursor:pointer;list-style:none;padding:12px 16px;color:#cbd5e1;font:600 12.5px system-ui">👁 Watch the live page <span style="color:#64748b;font-weight:500">— optional, to see what's happening</span></summary>
+      <div style="position:relative">
+        <img id="remote-img" onclick="remoteClick(event)" style="display:block;width:100%;cursor:crosshair" alt="Live page"/>
+        <div id="remote-wait" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;font:500 13px system-ui">Loading the live page…</div>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.1)">
+        <div style="color:#8b95a7;font:500 11px system-ui">Advanced (rarely needed): click the image to click that exact spot, or type into the field that's focused there.</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <input id="remote-text" placeholder="Type into the focused field…" onkeydown="if(event.key==='Enter'){event.preventDefault();remoteType(true);}" style="flex:1;min-width:160px;padding:8px 11px;border-radius:7px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font:500 12.5px system-ui"/>
+          <button class="btn-sm" onclick="remoteType(true)">Type + ⏎</button>
+          <button class="btn-sm" onclick="remoteKey('Tab')">Tab</button>
+          <button class="btn-sm" onclick="remoteKey('Backspace')">⌫</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>
 <style>
 @keyframes apspin{to{transform:rotate(360deg)}}
 .restart-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:9px;
@@ -866,7 +908,14 @@ function updateStats(){
 
 async function refresh(id){
   let s; try{ s=await api('/api/connect/status?ota='+id); }catch(e){ return; }
+  const prevState=LAST[id];
   LAST[id]=s.state; updateStats();
+  // the moment this channel pauses at a gate (login/CAPTCHA/OTP/bank), pop the Remote panel
+  // so the input lands on YOUR screen — no separate browser window needed.
+  const pausedNow=(s.state==='awaiting_captcha'||s.state==='awaiting_otp');
+  const wasPaused=(prevState==='awaiting_captcha'||prevState==='awaiting_otp');
+  if(pausedNow && !wasPaused && !REMOTE.id) openRemote(id);
+  if(REMOTE.id===id){ const rt=document.getElementById('remote-title'); if(rt&&s.gate_prompt) rt.textContent=s.gate_prompt; }
   const meta=STATE[s.state]||{t:s.state,cls:''};
   const pill=document.getElementById('state-'+id); if(!pill) return;
   pill.className='pill '+meta.cls; pill.innerHTML='<span class="dot"></span>'+meta.t;
@@ -880,14 +929,18 @@ async function refresh(id){
   lg.scrollTop=lg.scrollHeight;
 
   const gate=document.getElementById('gate-'+id);
+  if(s.state!==prevState){                          // rebuild only on a real state change (no flicker)
   if(s.state==='awaiting_captcha'){
-    gate.innerHTML='<div class="gate">👉 <b>Solve the CAPTCHA / do the manual step</b> in the browser window, then '+
+    gate.innerHTML='<div class="gate">👉 <b>Login / CAPTCHA / manual step</b> — do it in the browser window <b>or</b> '+
+      '<button class="btn-sm" onclick="openRemote(\''+id+'\')">🖥 Remote control</button>, then '+
       '<button class="btn-ok btn-sm" onclick="captchaDone(\''+id+'\')">Done ✓</button></div>';
   }else if(s.state==='awaiting_otp'){
-    gate.innerHTML='<div class="gate"><b>Enter the verification code</b><br><div style="margin-top:8px">'+
+    gate.innerHTML='<div class="gate"><b>Enter the verification code</b> (here, or via '+
+      '<button class="btn-sm" onclick="openRemote(\''+id+'\')">🖥 Remote control</button>)<br><div style="margin-top:8px">'+
       '<input id="otp-'+id+'" placeholder="384726" inputmode="numeric"/>'+
       '<button class="btn-ok btn-sm" onclick="submitOtp(\''+id+'\')">Submit</button></div></div>';
   }else{ gate.innerHTML=''; }
+  }
 }
 
 async function connect(id){
@@ -908,6 +961,97 @@ async function record(id){
   catch(e){ alert('Connect to this channel first.'); return; }
   startPolling(id);
 }
+// ---- Remote control: drive the OTA page from this screen while the bot is paused ----
+let REMOTE={id:null, timer:null};
+function openRemote(id){
+  REMOTE.id=id;
+  document.getElementById('remote-title').textContent='Action needed — '+(DOMAIN[id]||id);
+  document.getElementById('remote-modal').style.display='flex';
+  const t=document.getElementById('remote-text'); if(t) t.value='';
+  document.getElementById('remote-fields-list').innerHTML='';
+  remoteRefresh(); loadFields();
+  if(REMOTE.timer) clearInterval(REMOTE.timer);
+  REMOTE.timer=setInterval(remoteRefresh, 1000);
+}
+
+function _escHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function loadFields(){
+  if(!REMOTE.id) return;
+  let fields=[];
+  try{ const r=await api('/api/connect/fields?ota='+REMOTE.id); fields=r.fields||[]; }catch(e){}
+  const list=document.getElementById('remote-fields-list');
+  const empty=document.getElementById('remote-fields-empty');
+  const cont=document.getElementById('remote-continue');
+  if(!fields.length){ if(empty)empty.style.display='block'; if(cont)cont.style.display='none'; return; }
+  if(empty)empty.style.display='none'; if(cont)cont.style.display='inline-block';
+  const prev={}; list.querySelectorAll('input').forEach(i=>prev[i.dataset.fid]=i.value);  // keep typed values
+  const hadFields=list.querySelector('input')!==null;
+  list.innerHTML='';
+  fields.forEach(f=>{
+    const ty=(f.type==='password')?'password':(f.type==='email'?'email':'text');
+    const val=(prev[f.id]!==undefined)?prev[f.id]:'';
+    const w=document.createElement('label');
+    w.style.cssText='display:flex;flex-direction:column;gap:5px';
+    w.innerHTML='<span style="font:600 12.5px system-ui;color:#334155">'+_escHtml(f.label||('Field '+(f.id+1)))+(f.type==='password'?' 🔒':'')+'</span>'+
+      '<input data-fid="'+f.id+'" type="'+ty+'" value="'+_escHtml(val)+'" autocomplete="off" spellcheck="false" '+
+      'onkeydown="if(event.key===\'Enter\')submitFields()" '+
+      'style="padding:11px 13px;border-radius:10px;border:1.5px solid #cbd5e1;font:500 14px system-ui;outline:none" '+
+      'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#cbd5e1\'">';
+    list.appendChild(w);
+  });
+  if(!hadFields){ const first=list.querySelector('input'); if(first) setTimeout(()=>first.focus(),60); }  // auto-focus once
+}
+async function submitFields(){
+  const inputs=[...document.querySelectorAll('#remote-fields-list input')];
+  for(const inp of inputs){
+    if(inp.value==='') continue;
+    await remoteSend({action:'fill_field', id:parseInt(inp.dataset.fid,10), text:inp.value});
+  }
+  await remoteSend({action:'submit'});
+  setTimeout(loadFields, 1900);     // page likely advanced (e.g. to OTP) → re-detect fields
+}
+function closeRemote(){
+  if(REMOTE.timer) clearInterval(REMOTE.timer); REMOTE.timer=null;
+  document.getElementById('remote-modal').style.display='none';
+  REMOTE.id=null;
+}
+let _remoteBusy=false;
+async function remoteRefresh(){
+  if(!REMOTE.id || _remoteBusy) return;          // skip if a fetch is already in flight (no overlap)
+  _remoteBusy=true;
+  try{
+    const r=await fetch('/api/connect/screenshot?ota='+REMOTE.id+'&t='+Date.now(),{cache:'no-store'});
+    const wait=document.getElementById('remote-wait');
+    if(r.status===204){ if(wait) wait.style.display='flex'; return; }
+    const b=await r.blob(); const url=URL.createObjectURL(b);
+    const img=document.getElementById('remote-img');
+    // decode the new frame BEFORE swapping so the image never blanks (kills the flicker)
+    await new Promise(res=>{ const pre=new Image(); pre.onload=res; pre.onerror=res; pre.src=url; });
+    if(!REMOTE.id){ URL.revokeObjectURL(url); return; }   // closed mid-decode
+    const old=img._url; img._url=url; img.src=url;
+    if(old) URL.revokeObjectURL(old);
+    if(wait) wait.style.display='none';
+  }catch(e){}
+  finally{ _remoteBusy=false; }
+}
+async function remoteSend(body){
+  if(!REMOTE.id) return;
+  try{ await fetch('/api/connect/remote?ota='+REMOTE.id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){}
+  setTimeout(remoteRefresh, 350);
+}
+function remoteClick(ev){
+  const r=ev.target.getBoundingClientRect();
+  remoteSend({action:'click', x:(ev.clientX-r.left)/r.width, y:(ev.clientY-r.top)/r.height});
+}
+async function remoteType(withEnter){
+  const el=document.getElementById('remote-text'); const text=el.value;
+  if(text) await remoteSend({action:'type', text});
+  if(withEnter) await remoteSend({action:'key', key:'Enter'});
+  el.value=''; el.focus();
+}
+function remoteKey(key){ remoteSend({action:'key', key}); }
+async function remoteDone(){ const id=REMOTE.id; closeRemote(); if(id) await captchaDone(id); }
+
 async function captchaDone(id){ await api('/api/connect/captcha-done?ota='+id,{method:'POST'}); refresh(id); }
 async function submitOtp(id){
   const code=(document.getElementById('otp-'+id)||{}).value||'';
