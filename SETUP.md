@@ -75,13 +75,21 @@ python -m pytest -q          # expect: 125 passed
 
 ## How it avoids re-calling the LLM (page-map cache)
 The first time the bot sees an OTA page it asks the LLM how to fill it, then **stores the result**
-in `data/page_maps_<ota>.json` keyed by a stable, reload-proof descriptor (label / automation-id /
-DOM path). Every later visit **replays that map with plain Playwright — no LLM call** (log:
-`replayed learned map … no LLM`). These cache files **are committed**, so a fresh clone/deploy
-starts with the already-learned maps and only calls the LLM for genuinely new pages.
+in `data/page_maps_<ota>.json`. Every later visit on the **same machine** replays that map with
+plain Playwright — no LLM call (log: `replayed learned map … no LLM`).
+
+> ⚠️ **These maps are LOCAL-ONLY — never ship them.** They bake in the learned property's *values*
+> and ephemeral OTA listing-IDs, so copying them to another machine/property fills the wrong data
+> ("fucked-up mapping"). They're gitignored on purpose. Each machine learns its own.
 
 - Per-OTA dedicated handlers (login, address, room-type, photos, property-type) are deterministic
-  and never need the LLM at all.
+  and never need the LLM at all — these carry the load on a fresh machine, so re-learning is cheap.
+
+## Sharing the project with another person
+**Use `git clone` — do NOT zip the folder.** A zip drags along `data/` (the local SQLite DB and the
+machine-specific learned page-maps) and possibly `.venv`/`.env`, all of which break or mislead on
+another PC. A clone takes only the tracked source; they then run `bash scripts/setup.sh`, add their
+own `.env`, and start fresh — correct every time.
 - Photos: downloaded from the MIS S3 URLs into a temp cache, then EXIF-oriented → padded to
   landscape → resized into the OTA size window (needs **Pillow**, in requirements).
 

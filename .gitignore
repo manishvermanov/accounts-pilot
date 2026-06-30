@@ -20,11 +20,12 @@ secrets/
 examples/gate_data.json
 gate_data.json
 
-# local data (sqlite db, screenshots, browser state) — ignore contents EXCEPT the learned
-# LLM page-maps, which we DO commit so a fresh clone/deploy doesn't re-call the LLM.
+# local data (sqlite db, screenshots, browser state). EVERYTHING here is machine/run-specific
+# and must NOT travel to another PC. The learned LLM page-maps in particular bake in the
+# property's values + ephemeral OTA listing-IDs (and can capture bad clicks), so shipping
+# them breaks the mapping on a fresh machine — each environment learns its own.
 data/*
 !data/.gitkeep
-!data/page_maps_*.json
 artifacts/
 screenshots/
 storage_state.json
@@ -36,9 +37,9 @@ storage_state.json
 *.log
 .gstack/
 
-# --- per-OTA login cookies (sensitive — never commit) ---
+# --- per-OTA login cookies + learned page-maps (machine/run-specific — never commit) ---
 storage_state_*.json
-# (page_maps_*.json are intentionally committed via the data/ rule above — they hold no secrets)
+page_maps_*.json
 
 # --- local scratch / test output ---
 *.png
