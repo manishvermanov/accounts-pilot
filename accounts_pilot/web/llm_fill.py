@@ -224,16 +224,21 @@ def _is_excluded(field: dict) -> bool:
 
 def _azure_client():
     """Handle both Azure styles: the new `/openai/v1` base URL (OpenAI client) and
-    the classic resource endpoint (AzureOpenAI client + api_version)."""
+    the classic resource endpoint (AzureOpenAI client + api_version).
+
+    Fail FAST: a short timeout + zero SDK retries, so an unreachable/misconfigured Azure
+    endpoint surfaces in seconds instead of hanging and retrying on every page."""
     endpoint = settings.azure_openai_endpoint.rstrip("/")
     if "/openai/v1" in endpoint:
         from openai import OpenAI
-        return OpenAI(base_url=endpoint + "/", api_key=settings.azure_openai_key)
+        return OpenAI(base_url=endpoint + "/", api_key=settings.azure_openai_key,
+                      timeout=20.0, max_retries=0)
     from openai import AzureOpenAI
     return AzureOpenAI(
         azure_endpoint=endpoint,
         api_key=settings.azure_openai_key,
         api_version=settings.azure_openai_api_version,
+        timeout=20.0, max_retries=0,
     )
 
 

@@ -4957,6 +4957,7 @@ class LiveSession:
 
         use_llm = bool(settings.azure_openai_endpoint and settings.azure_openai_key
                        and settings.azure_openai_deployment)
+        self._llm_down = False                          # trips on the first Azure connection failure
         if not use_llm:
             self._say("⚠ No LLM key configured — only the 4 stable rules will run. "
                       "Set AZURE_OPENAI_* in .env for full autonomous fill.")
@@ -5282,7 +5283,7 @@ class LiveSession:
                     # An EMPTY learned map ([]) means this page can't be cached — card-select
                     # pages like the property-type chooser store 0 fields. Don't waste the pass
                     # replaying nothing; run the LLM NOW (same pass) so it advances first try.
-                    elif use_llm:
+                    elif use_llm and not self._llm_down:
                         try:
                             fields = llm_fill.scrape_fields(self.rt.page)
                             actions = llm_fill.map_actions(fields, llm_profile, autopilot=autopilot)
@@ -5307,7 +5308,20 @@ class LiveSession:
                                 # persist only AFTER the page advances (no cache poisoning)
                                 pending = (mkey, entries)
                         except Exception as e:
-                            self._say(f"  · LLM error: {type(e).__name__}: {e}")
+                            name = type(e).__name__
+                            self._say(f"  · LLM error: {name}: {e}")
+                            # Azure unreachable / bad key / bad endpoint / not configured → stop
+                            # hammering it on every page. Turn the LLM OFF for this run and keep
+                            # going with the deterministic handlers + Remote control.
+                            fatal = isinstance(e, RuntimeError) or any(
+                                k in name for k in ("Connection", "Timeout", "Authentication",
+                                                    "NotFound", "PermissionDenied", "APIStatus", "APIError"))
+                            if fatal and not self._llm_down:
+                                self._llm_down = True
+                                self._say("⚠ Azure OpenAI is unreachable or misconfigured — LLM turned OFF "
+                                          "for this run (no more retries). The per-OTA handlers + 🖥 Remote "
+                                          "control still work. Fix AZURE_OPENAI_* in .env / check the network, "
+                                          "then re-run for full auto-fill.")
 
                 if navigated:
                     self._commit_pending(pending)
