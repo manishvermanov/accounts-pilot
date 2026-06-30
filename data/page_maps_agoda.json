@@ -1,0 +1,189 @@
+{
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/get-started/manual::What type of property are you listing?": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/get-started/hotel::Which hotel-type property best fits your place?": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/amenities::Amenities": [
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/rooms::Setup your rooms & rates": [
+    {
+      "by": "label",
+      "locator": "Connect with channel manager\n\nManage your rate and availability through a third-",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Room type",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-testid=\"room-size\"]",
+      "action": "fill",
+      "value": "17.2"
+    },
+    {
+      "by": "css",
+      "locator": "[data-testid=\"room-base-price\"]",
+      "action": "fill",
+      "value": "2500"
+    },
+    {
+      "by": "css",
+      "locator": "[data-testid=\"room-extra-price\"]",
+      "action": "fill",
+      "value": "500"
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-testid=\"room-breakfast-price\"]",
+      "action": "fill",
+      "value": "200"
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/photos::Photos": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/pricing::Pricing": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/details::Property details": [
+    {
+      "by": "css",
+      "locator": "[data-testid=\"property-name\"]",
+      "action": "fill",
+      "value": "Hotel Manchester Royals LLP"
+    },
+    {
+      "by": "label",
+      "locator": "Star rating",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "From",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "To",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Check out",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Refundable up to 1 day before check-in date\nMost popular with guests\n\nGuest may",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90229121/profile::Profile": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/en-us/list-my-property/onboard/90319183/amenities::Amenities": [
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Guest’s favorites",
+      "action": "click",
+      "value": ""
+    }
+  ]
+}

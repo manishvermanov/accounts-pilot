@@ -8,10 +8,14 @@ python-dotenv>=1.0
 
 # --- browser automation ---
 playwright>=1.44
+# IMPORTANT: after `pip install -r requirements.txt`, also run:  python -m playwright install chromium
 # AgentQL: local Playwright element-resolution (actions stay local). `pip install agentql`
 # agentql
 # CloakBrowser is installed on demand (stealth swap-in). Uncomment to pin:
 # cloakbrowser
+
+# --- photos (download → EXIF-orient → landscape white-pad → resize for OTA upload) ---
+Pillow>=10.0
 
 # --- gate handlers (OTP / CAPTCHA) ---
 httpx>=0.27

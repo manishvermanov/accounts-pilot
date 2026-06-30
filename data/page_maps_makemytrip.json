@@ -1,0 +1,534 @@
+{
+  "DEMO-HOTEL-01::/newextranet/::My Properties": [],
+  "DEMO-HOTEL-01::/newextranet/onboarding/amenities::Property Amenities": [
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/newextranet/onboarding/rooms::": [
+    {
+      "by": "label",
+      "locator": "Standard",
+      "action": "select",
+      "value": "Standard Room"
+    },
+    {
+      "by": "label",
+      "locator": "Standard",
+      "action": "select",
+      "value": "Mountain view"
+    },
+    {
+      "by": "label",
+      "locator": "Square Meter",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Enter size (Area)",
+      "action": "fill",
+      "value": "18"
+    },
+    {
+      "by": "label",
+      "locator": "Example: Luxury room with private pool",
+      "action": "fill",
+      "value": "Standard Room"
+    },
+    {
+      "by": "label",
+      "locator": "Enter number of rooms",
+      "action": "fill",
+      "value": "6"
+    },
+    {
+      "by": "label",
+      "locator": "Write the description",
+      "action": "fill",
+      "value": "Standard Room with queen bed, private bathroom, air conditioning, TV, free WiFi, and kettle. Ideal for up to 3 guests."
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/newextranet/::My Properties": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/newextranet/onboarding/amenities::Property Amenities": [
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50002-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50024-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50029-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50036-radio-button-false\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50059-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50087-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50122-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50132-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50154-radio-button-false\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50163-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50173-radio-button-false\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50261-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50269-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50001-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50009-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50012-radio-button-false\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50025-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50139-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50069-radio-button-true\"]",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "css",
+      "locator": "[data-test-id=\"amenity-radio-50116-radio-button-false\"]",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/newextranet/onboarding/photos-and-videos/assign::": [],
+  "DEMO-HOTEL-01::/newextranet/onboarding/location::Property Location Details": [],
+  "DEMO-HOTEL-01::/newextranet/onboarding/photos-and-videos::": [],
+  "DEMO-HOTEL-01::/newextranet/onboarding/policies::Policies": [
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Please add details",
+      "action": "fill",
+      "value": "Valid Government ID mandatory at check-in. No refund on no-show. Children are allowed. Free stay for children under 6 years. Breakfast available at extra charge. Parking available on-site. In-house restaurant and room service available."
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/newextranet/onboarding/policies::Policies": [
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "select",
+      "value": "24 hours before check-in"
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Extra adult and Extra paid child",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "select",
+      "value": "6"
+    },
+    {
+      "by": "label",
+      "locator": "​",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Please add details",
+      "action": "fill",
+      "value": "No smoking. Pets are not allowed. Local IDs are accepted. Children are allowed and stay free up to 6 years. Early check-in and late check-out are subject to availability. Unmarried couples are not allowed."
+    },
+    {
+      "by": "label",
+      "locator": "Enter",
+      "action": "fill",
+      "value": "0"
+    },
+    {
+      "by": "label",
+      "locator": "Enter",
+      "action": "fill",
+      "value": "6"
+    },
+    {
+      "by": "label",
+      "locator": "Enter",
+      "action": "fill",
+      "value": "15"
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/newextranet/onboarding/finance::": []
+}

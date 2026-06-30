@@ -1,0 +1,376 @@
+{
+  "DEMO-HOTEL-01::/become-a-host/category.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_choose_category_hotel",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/property.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_property_type_204",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/owner.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_choose_owner_type_single",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/feedback-loop.html::": [],
+  "DEMO-HOTEL-01::/become-a-host/address.html::": [],
+  "DEMO-HOTEL-01::/become-a-host/channel-manager.html::": [
+    {
+      "by": "label",
+      "locator": "No, I won’t be using a channel manager at this time",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/name.html::": [
+    {
+      "by": "label",
+      "locator": "Property name",
+      "action": "fill",
+      "value": "Maple Ridge Inn"
+    },
+    {
+      "by": "label",
+      "locator": "3 stars",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/facilities.html::": [
+    {
+      "by": "label",
+      "locator": "Restaurant",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Room service",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "24-hour front desk",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Non-smoking rooms",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Family rooms",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Free WiFi",
+      "action": "check",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Air conditioning",
+      "action": "check",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/services-offered.html::": [
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Yes, free",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/languages.html::": [],
+  "DEMO-HOTEL-01::/become-a-host/house-rules.html::": [
+    {
+      "by": "label",
+      "locator": "From",
+      "action": "select",
+      "value": "13:00"
+    },
+    {
+      "by": "label",
+      "locator": "Until",
+      "action": "select",
+      "value": "23:00"
+    },
+    {
+      "by": "label",
+      "locator": "From",
+      "action": "select",
+      "value": "00:00"
+    },
+    {
+      "by": "label",
+      "locator": "Until",
+      "action": "select",
+      "value": "11:00"
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/overview-room.html::": [],
+  "DEMO-HOTEL-01::/become-a-host/photos.html::": [
+    {
+      "by": "label",
+      "locator": "Upload at least 5 photos of your property. The more you upload, the more likely you are to get bookings. You can add more later.",
+      "action": "fill",
+      "value": "C:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\exterior.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\lobby.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\standard_room.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\deluxe_room.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\family_suite.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\bathroom.jpg\nC:\\Users\\manis\\Desktop\\Accounts Pilot\\data\\photos\\DEMO-HOTEL-01\\restaurant.jpg"
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/invoicing.html::": [
+    {
+      "by": "label",
+      "locator": "manish verma",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/vat.html::": [
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "PAN",
+      "action": "fill",
+      "value": "AABCM1234N"
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "DEMO-HOTEL-01::/become-a-host/how-we-work.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/category.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_choose_category_hotel",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/property.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_property_type_204",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/owner.html::": [
+    {
+      "by": "css",
+      "locator": "#automation_id_choose_owner_type_single",
+      "action": "check",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/feedback-loop.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/address.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/channel-manager.html::": [
+    {
+      "by": "label",
+      "locator": "No, I won’t be using a channel manager at this time",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/name.html::": [
+    {
+      "by": "label",
+      "locator": "Property Name",
+      "action": "fill",
+      "value": "Hotel Manchester Royals LLP"
+    },
+    {
+      "by": "label",
+      "locator": "3 stars",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/facilities.html::": [
+    {
+      "by": "label",
+      "locator": "Restaurant",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Room service",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Bar",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "24-hour front desk",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Airport shuttle",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Spa",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Free Wifi",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Air conditioning",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Electric vehicle charging station",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/services-offered.html::": [
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/languages.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/house-rules.html::": [
+    {
+      "by": "label",
+      "locator": "Yes",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "From",
+      "action": "select",
+      "value": "11:00"
+    },
+    {
+      "by": "label",
+      "locator": "Until",
+      "action": "select",
+      "value": "23:00"
+    },
+    {
+      "by": "label",
+      "locator": "From",
+      "action": "select",
+      "value": "00:00"
+    },
+    {
+      "by": "label",
+      "locator": "Until",
+      "action": "select",
+      "value": "10:00"
+    }
+  ],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/overview-room.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/photos.html::": [],
+  "b9635fe2-6b18-4806-a7e0-dfa55792b5c3::/become-a-host/invoicing.html::": [
+    {
+      "by": "label",
+      "locator": "Hotel Manchester Royals LLP",
+      "action": "click",
+      "value": ""
+    },
+    {
+      "by": "label",
+      "locator": "Legal company name (please specify)",
+      "action": "fill",
+      "value": "HOTEL MANCHESTER ROYALS LLP"
+    },
+    {
+      "by": "label",
+      "locator": "No",
+      "action": "click",
+      "value": ""
+    }
+  ]
+}

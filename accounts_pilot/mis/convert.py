@@ -228,7 +228,12 @@ def raw_to_profile(src: dict) -> dict:
         },
         "contact": {
             "full_name": src.get("billing_name") or src.get("property_name"),
-            "email": src.get("owner_email"),
+            # prefer a HOTEL-specific email; only fall back to the account owner's email
+            # (owner_email is the DigiStay account holder — shared across that account's
+            # properties, e.g. testmanish8070@gmail.com — not the hotel's own contact).
+            "email": (src.get("property_email") or src.get("hotel_email")
+                      or src.get("reservation_email") or src.get("contact_email")
+                      or src.get("service_email") or src.get("email") or src.get("owner_email")),
             "phone": phone,
         },
         "compliance": {

@@ -20,9 +20,11 @@ secrets/
 examples/gate_data.json
 gate_data.json
 
-# local data (sqlite db, screenshots, browser state)
-data/
+# local data (sqlite db, screenshots, browser state) — ignore contents EXCEPT the learned
+# LLM page-maps, which we DO commit so a fresh clone/deploy doesn't re-call the LLM.
+data/*
 !data/.gitkeep
+!data/page_maps_*.json
 artifacts/
 screenshots/
 storage_state.json
@@ -36,7 +38,7 @@ storage_state.json
 
 # --- per-OTA login cookies (sensitive — never commit) ---
 storage_state_*.json
-page_maps_*.json
+# (page_maps_*.json are intentionally committed via the data/ rule above — they hold no secrets)
 
 # --- local scratch / test output ---
 *.png
